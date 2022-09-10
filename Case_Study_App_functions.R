@@ -190,8 +190,10 @@ load_metadata_teil <- function(ID_Teil) {
       str_replace_all("NA","NA ")%>%
       str_replace_all(' "\\d+"', "\n")%>%
       read_delim()%>%
-      select(starts_with(column_of_interest))%>%
-      combine_columns()
+      select(starts_with(column_of_interest))
+     teil_meta[teil_meta=="NA "]<-NA
+     teil_meta <- combine_columns(teil_meta)
+    
     #names(teil_meta)<-gsub(".x","",names(teil_meta))
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
     teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
@@ -229,14 +231,10 @@ load_metadata_teil <- function(ID_Teil) {
     select(ID_Teil,"Werksnummer")
   names(teil_meta)<-gsub(ID_Teil,"ID_Einzelteil",names(teil_meta))
 
-   print(nrow(teil_meta))
-   teil_meta<- semi_join(data.frame(teil_meta), komp_zu_teile, by = "ID_Einzelteil")
-   print(nrow(teil_meta))
-   #teil_meta <- fread(file=teil_meta_file.path(ID_Teil), select=c(ID_Teil,"Werksnummer"), header=TRUE)
   
   print("Columns present:")
   print(names(teil_meta))
-  
+
   # Problem: Some data is spread over multiple (apparently wrongly joined) columns.
   # These are the columns we want in the end.
   #target_columns <- list("ID_Motor","ID_Schaltung","Werksnummer")
