@@ -145,7 +145,7 @@ load_metadata_teil <- function(ID_Teil) {
   }
   
   if(ID_Teil_num == "T05") {
-    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num), ",")%>%
       select(contains(".x"))
     names(teil_meta)<-gsub(".x","",names(teil_meta))
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
