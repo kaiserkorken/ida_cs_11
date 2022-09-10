@@ -85,3 +85,129 @@ load_metadata_komp <- function(ID_Komp) {
 
 }
 
+
+
+########################
+# EINZELTEIL/PARTS
+########################
+teil_meta_file.path <- function(teil_type) {
+  dir(file.path("Data","Einzelteil"), pattern=paste("^Einzelteil_",teil_type,".*",sep=""), full.names=TRUE) 
+}
+
+load_metadata_teil <- function(ID_Teil) {
+  ID_Teil_num<- str_replace_all(ID_Teil,"ID_T","")
+  if(strtoi(ID_Teil_num) > 10){
+    ID_Teil_num<-paste0("T",ID_Teil_num)
+  }else {
+    ID_Teil_num<-paste0("T0",ID_Teil_num)
+  }
+  
+  print(ID_Teil_num)
+  ID_Teil<-paste0("ID_",ID_Teil_num)
+  print(ID_Teil)
+  
+  print(teil_meta_file.path(ID_Teil_num))
+  
+  if(ID_Teil_num == "T01") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1" | | ', .) %>%
+      str_replace_all(" \\| \\| ", ";")%>%
+      str_replace_all("\\s", "\n")%>%
+      read_delim()%>%
+      select(contains(".x"))
+    names(teil_meta)<-gsub(".x","",names(teil_meta))
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T02") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1"  ',.)%>%
+      str_replace_all("  ", ";")%>%
+      str_replace_all("\t", "\n")%>%
+      read_delim()%>%
+      select(contains(".x"))
+    names(teil_meta)<-gsub(".x","",names(teil_meta))
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01") 
+  }
+  
+  if(ID_Teil_num == "T03") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1"|',.)%>%
+      str_replace_all("\\|", ",")%>%
+      str_replace_all("\v", "\n")%>%
+      read_delim()
+  }
+  
+  if(ID_Teil_num == "T04") {
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num), ",")
+  }
+  
+  if(ID_Teil_num == "T05") {
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num), ",")%>%
+      select(contains(".x"))
+    names(teil_meta)<-gsub(".x","",names(teil_meta))
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T06") {
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num), ",")
+  }
+  
+  if(ID_Teil_num == "T21") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))
+  }
+  
+  if(ID_Teil_num == "T22") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1"\t',.)%>%
+      str_replace_all("\\t", ",")%>%
+      str_replace_all('"Fehlerhaft_Fahrleistung"','"Fehlerhaft_Fahrleistung" ')%>%
+      str_replace_all("NA","NA ")%>%
+      str_replace_all(' "\\d+"', "\n")%>%
+      read_delim()%>%
+      select(contains(".x"))
+    names(teil_meta)<-gsub(".x","",names(teil_meta))
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T23") {
+    print("hier")
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      select(contains(".x"))
+    names(teil_meta)<-gsub(".x","",names(teil_meta))
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T24") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1"  ',.) %>%
+      str_replace_all("\f", "\n")%>%
+      str_replace_all("  ", ",")%>%
+      read_delim()%>%
+      select(contains(".x"))
+    names(teil_meta)<-gsub(".x","",names(teil_meta))
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T25") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))
+  }
+  
+  teil_meta<-teil_meta %>% 
+    select(ID_Teil,"Werksnummer")
+  
+  #teil_meta <- fread(file=teil_meta_file.path(ID_Teil), select=c(ID_Teil,"Werksnummer"), header=TRUE)
+  
+  print("Columns present:")
+  print(names(teil_meta))
+  
+  # Problem: Some data is spread over multiple (apparently wrongly joined) columns.
+  # These are the columns we want in the end.
+  #target_columns <- list("ID_Motor","ID_Schaltung","Werksnummer")
+}
