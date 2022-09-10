@@ -141,11 +141,11 @@ load_metadata_teil <- function(ID_Teil) {
   }
   
   if(ID_Teil_num == "T04") {
-    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num), ",")
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))
   }
   
   if(ID_Teil_num == "T05") {
-    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num), ",")%>%
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
       select(contains(".x"))
     names(teil_meta)<-gsub(".x","",names(teil_meta))
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
@@ -153,11 +153,11 @@ load_metadata_teil <- function(ID_Teil) {
   }
   
   if(ID_Teil_num == "T06") {
-    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num), ",")
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))
   }
   
   if(ID_Teil_num == "T21") {
-    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))
   }
   
   if(ID_Teil_num == "T22") {
@@ -175,8 +175,7 @@ load_metadata_teil <- function(ID_Teil) {
   }
   
   if(ID_Teil_num == "T23") {
-    print("hier")
-    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
       select(contains(".x"))
     names(teil_meta)<-gsub(".x","",names(teil_meta))
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
@@ -196,7 +195,7 @@ load_metadata_teil <- function(ID_Teil) {
   }
   
   if(ID_Teil_num == "T25") {
-    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))
   }
   
   teil_meta<-teil_meta %>% 
