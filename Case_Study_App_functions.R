@@ -96,13 +96,15 @@ teil_meta_file.path <- function(teil_type) {
 
 load_metadata_teil <- function(ID_Teil) {
   ID_Teil_num<- str_replace_all(ID_Teil,"ID_T","")
-  if(ID_Teil_num > 10){
+  if(strtoi(ID_Teil_num) > 10){
     ID_Teil_num<-paste0("T",ID_Teil_num)
   }else {
     ID_Teil_num<-paste0("T0",ID_Teil_num)
   }
   
+  print(ID_Teil_num)
   ID_Teil<-paste0("ID_",ID_Teil_num)
+  print(ID_Teil)
   
   print(teil_meta_file.path(ID_Teil_num))
   
@@ -197,13 +199,13 @@ load_metadata_teil <- function(ID_Teil) {
     teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))
   }
   
-  teil_meta <- teil_meta %>% select(ID_Teil,"Werksnummer")
-  
+  teil_meta<-teil_meta %>% 
+    select(ID_Teil,"Werksnummer")
   
   #teil_meta <- fread(file=teil_meta_file.path(ID_Teil), select=c(ID_Teil,"Werksnummer"), header=TRUE)
-
-   print("Columns present:")
-   print(names(teil_meta))
+  
+  print("Columns present:")
+  print(names(teil_meta))
   
   # Problem: Some data is spread over multiple (apparently wrongly joined) columns.
   # These are the columns we want in the end.
