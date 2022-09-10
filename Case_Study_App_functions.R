@@ -141,7 +141,7 @@ load_metadata_teil <- function(ID_Teil) {
   }
   
   if(ID_Teil_num == "T04") {
-    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num), ",")
   }
   
   if(ID_Teil_num == "T05") {
@@ -153,7 +153,7 @@ load_metadata_teil <- function(ID_Teil) {
   }
   
   if(ID_Teil_num == "T06") {
-    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num), ",")
   }
   
   if(ID_Teil_num == "T21") {
