@@ -65,6 +65,7 @@ library(magick)
 library(grid)
 library(tmap)
 library(viridis)
+library(rgdal)
 
 #### UI #####
 
@@ -109,7 +110,7 @@ body <- dashboardBody(
               # Main panel for displaying outputs ----
               mainPanel(
                 # Output: 
-                plotOutput(outputId = "map")
+                tmapOutput("map")
               ),
             )   
     ),
@@ -143,8 +144,7 @@ server <- function(input, output) {
   #    re-executed when inputs (input$bins) change
   # 2. Its output type is a plot
   
-
-  output$map <- renderPlot({
+  output$map <- renderTmap({
 
     # load shapefile for germany
     ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm2.shp")
@@ -157,7 +157,6 @@ server <- function(input, output) {
       tm_compass(position = c("left", "top"), size = 2)
   })
 }
-
 
 #### RUN 
 
