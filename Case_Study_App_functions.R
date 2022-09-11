@@ -90,10 +90,21 @@ load_metadata_komp <- function(ID_Komp) {
 ########################
 # EINZELTEIL/PARTS
 ########################
+
+# Function to get path of the specific Documents
+# Args:
+#       teil_type = "T<XX>"
+# Return:
+#       path
 teil_meta_file.path <- function(teil_type) {
   dir(file.path("Data","Einzelteil"), pattern=paste("^Einzelteil_",teil_type,".*",sep=""), full.names=TRUE) 
 }
 
+# Function combines columns with same name seperated by ".x" and ".y"
+# Args:
+#       df_xy [data frame where column names contain ".x" and ".y"]
+# Return:
+#       df_comb [combined columns of df_xy]
 combine_columns<-function(df_xy){
   df_x<-select(df_xy,ends_with(".x"))%>%
     na.omit()
@@ -102,26 +113,32 @@ combine_columns<-function(df_xy){
   df_y<-select(df_xy,ends_with(".y"))%>%
     na.omit()
   names(df_y)<-gsub(".y","",names(df_y))
-  df_comb<- right_join(df_x,df_y)
+  df_comb<- full_join(df_x,df_y)
   
   return(df_comb)
 }
 
+# Function to parse through the single parts files
+# different parsing technique are needed because of different delimeters and seperators in txts
+# Args:
+#       ID_Teil = "ID_T<X>
+# Return:
+#       teil_meta = [files converted to data frame with needed columns]
 load_metadata_teil <- function(ID_Teil) {
   column_of_interest<-c("ID","Werksnummer","Produktionsdatum")
 
-  ID_Teil_num<- str_replace_all(ID_Teil,"ID_T","")
+  # change string to needed form
+  ID_Teil_num<- str_replace_all(ID_Teil,"ID_T","") 
+  
   if(strtoi(ID_Teil_num) > 10){
     ID_Teil_num<-paste0("T",ID_Teil_num)
   }else {
     ID_Teil_num<-paste0("T0",ID_Teil_num)
   }
-  
-  print(ID_Teil_num)
+
   ID_Teil<-paste0("ID_",ID_Teil_num)
-  print(ID_Teil)
   
-  print(teil_meta_file.path(ID_Teil_num))
+  # parse through files and save to teil_meta with needed columns
   
   if(ID_Teil_num == "T01") {
     teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
@@ -131,7 +148,6 @@ load_metadata_teil <- function(ID_Teil) {
       read_delim()%>%
       select(starts_with(column_of_interest))%>%
       combine_columns()
-    #names(teil_meta)<-gsub(".x","",names(teil_meta))
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
     teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
   }
@@ -144,7 +160,6 @@ load_metadata_teil <- function(ID_Teil) {
       read_delim()%>%
       select(starts_with(column_of_interest))%>%
       combine_columns()
-   # names(teil_meta)<-gsub(".x","",names(teil_meta))
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
     teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01") 
   }
@@ -194,7 +209,6 @@ load_metadata_teil <- function(ID_Teil) {
      teil_meta[teil_meta=="NA "]<-NA
      teil_meta <- combine_columns(teil_meta)
     
-    #names(teil_meta)<-gsub(".x","",names(teil_meta))
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
     teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
   }
@@ -203,7 +217,6 @@ load_metadata_teil <- function(ID_Teil) {
     teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
       select(starts_with(column_of_interest))%>%
       combine_columns()
-    #names(teil_meta)<-gsub(".x","",names(teil_meta))
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
     teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
   }
@@ -216,7 +229,6 @@ load_metadata_teil <- function(ID_Teil) {
       read_delim()%>%
       select(starts_with(column_of_interest))%>%
       combine_columns()
-    #names(teil_meta)<-gsub(".x","",names(teil_meta))
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
     teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
   }
@@ -226,16 +238,17 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))
   }
 
- 
+  # select columns and change ID_Teil to "ID_Einzelteil" for combining
   teil_meta<-teil_meta %>% 
     select(ID_Teil,"Werksnummer")
   names(teil_meta)<-gsub(ID_Teil,"ID_Einzelteil",names(teil_meta))
+  
+  # reduce size of df by semi_join with komp_zu_teile by "ID_Einzelteil" 
+  teil_meta<- semi_join(data.frame(teil_meta), komp_zu_teile, by = "ID_Einzelteil")
 
   
   print("Columns present:")
   print(names(teil_meta))
-
-  # Problem: Some data is spread over multiple (apparently wrongly joined) columns.
-  # These are the columns we want in the end.
-  #target_columns <- list("ID_Motor","ID_Schaltung","Werksnummer")
+  
+  return(teil_meta)
 }
