@@ -176,7 +176,7 @@ ui <- dashboardPage(
 server <- function(input, output) {
 
   # load shapefile for germany
-  ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm1.shp")
+  ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm3.shp")
   
   output$map <- renderTmap({
 
@@ -184,7 +184,7 @@ server <- function(input, output) {
       tm_borders() +
       tm_polygons(col = "lightblue1", 
                   alpha = 0.4, 
-                  id = "NAME_2",
+                  id = "NAME_3",
                   popup.vars = c("Bundesland: "="NAME_1")) +
       tm_scale_bar(position = c("left", "bottom"), width = 0.15) #+
       #tm_compass(position = c("left", "top"), size = 2)
