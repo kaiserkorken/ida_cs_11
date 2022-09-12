@@ -70,7 +70,7 @@ komp_zu_teile <- lapply(list_komp, load_komp_zu_teile) %>%
 
 # from the Einzelteil IDs, create a list of all part types included
 
-#list_teil <- unique(fread(text=komp_zu_teile$ID_Einzelteil, sep="-", select=1))
+
 list_teil <- unique(str_match(komp_zu_teile$Typ_Einzelteil, "(ID_T[:digit:]+)")[,1])
 print(list_teil)
 
@@ -82,10 +82,9 @@ print(list_teil)
 
 # no link files here since there are no further branches
 
-# TODO
-
-teil_meta <- lapply(list_teil, load_metadata_teil)
-
+teil_meta <- lapply(list_teil, load_metadata_teil) %>%
+  rbindlist()
+komp_zu_teile<-inner_join(komp_zu_teile, teil_meta,by="ID_Einzelteil", suffix=c("_Komponente","_Einzelteil"))
 
 
 ############################
@@ -96,6 +95,7 @@ teil_meta <- lapply(list_teil, load_metadata_teil)
 geodata <- lapply(dir(file.path("Data","Geodaten"), pattern="Werke", full.names=TRUE), fread, select=1:5, keepLeadingZeros=FALSE) %>%
 	rbindlist() %>%
 	mutate(Werk = as.numeric(gsub("O","",Werk))) %>%
+  na.omit()%>%
 	rename(Längengrad = 5)
 	
 
@@ -106,16 +106,18 @@ geodata <- lapply(dir(file.path("Data","Geodaten"), pattern="Werke", full.names=
 
 	
 # join Fahrzeug->Komponente and Komponente->Einzelteil table
+names(fz_zu_komp)<-gsub("Werksnummer","Werksnummer_Fahrzeug",names(fz_zu_komp))
 fz_komp_teile <- fz_zu_komp %>%
-	inner_join(komp_zu_teile,by="ID_Komponente", suffix=c("_Fahrzeug","_Komponente"))
+	inner_join(komp_zu_teile,by="ID_Komponente")
+fz_komp_teile$Werksnummer_Einzelteil<-as.double(fz_komp_teile$Werksnummer_Einzelteil)
 
 
 summary(fz_komp_teile)
 
-# join geodata (for vehicles and component manufacturer, TODO: add single part manufacturer
-fz_komp_teile %>%
+# join geodata (for vehicles and component manufacturer
+fz_komp_teile_geo <- fz_komp_teile %>%
 	inner_join(geodata, by=c(Werksnummer_Fahrzeug="Werk")) %>%
-	inner_join(geodata, by=c(Werksnummer_Komponente="Werk"), suffix=c("_Fahrzeug","_Komponente"))
-
+	inner_join(geodata, by=c(Werksnummer_Komponente="Werk"), suffix=c("","_Komponente"))%>%
+  inner_join(geodata, by=c(Werksnummer_Einzelteil="Werk"),suffix=c("_Fahrzeug","_Einzelteil"))
 
 
