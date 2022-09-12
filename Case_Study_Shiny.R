@@ -179,7 +179,29 @@ server <- function(input, output) {
   ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm1.shp")
   
   output$map <- renderTmap({
-
+    coord<- data.frame(Breitengrad=NA, Längengrad=NA)%>%
+      na.omit()
+    if (any(final_data$ID_Fahrzeug == input$textInputVehicleID)) {
+      # TODO: Plot necessary data for search bar usage
+      row_of_content <- final_data[which(final_data$ID_Fahrzeug == input$textInputVehicleID),]
+      
+      single_part_location <- coord
+      component_location <- coord
+      vehicle_location <- coord
+      
+      single_part_location <- row_of_content[,c("Breitengrad_Einzelteil", "Längengrad_Einzelteil")]
+      names(single_part_location) <- gsub("_Einzelteil","", names(single_part_location))      
+      component_location <- row_of_content[,c("Breitengrad_Komponente", "Längengrad_Komponente")]
+      names(component_location) <- gsub("_Komponente","", names(component_location))
+      vehicle_location <- row_of_content[,c("Breitengrad_Fahrzeug", "Längengrad_Fahrzeug")]
+      names(vehicle_location) <- gsub("_Fahrzeug","", names(vehicle_location))
+      
+      print(vehicle_location)
+      coord<- coord %>% full_join(single_part_location,by = c("Breitengrad", "Längengrad"))%>%
+        full_join(single_part_location,by = c("Breitengrad", "Längengrad"))%>%
+        full_join(vehicle_location,by = c("Breitengrad", "Längengrad"))
+      print(coord)
+    }
     map_germany <- tm_shape(ger_shp) +
       tm_borders() +
       tm_polygons(col = "lightblue1", 
