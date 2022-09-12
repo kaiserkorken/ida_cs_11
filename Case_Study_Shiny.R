@@ -67,39 +67,49 @@ library(tmap)
 library(viridis)
 library(rgdal)
 
+#library(DT)
+
 #### UI #####
 
 sidebar <- dashboardSidebar(
   sidebarMenu(
     menuItem("Map", tabName = "map", icon = icon("dashboard")),
-    menuItem("Boxplot", tabName = "boxplot", icon = icon("th"))
+    menuItem("Boxplot", tabName = "boxplot", icon = icon("th")),
+    menuItem("Material Flow", tabName = "matFlow", icon = icon("th")),
+    menuItem("Data set", tabName = "dataSet", icon = icon("th"))
   )
 )
 
 body <- dashboardBody(
   tabItems(
     tabItem(tabName = "map",
-            h2("Map"),
+            #h2("Map"),
             # Sidebar layout with input and output definitions ----
             sidebarLayout(
               # Sidebar panel for inputs ----
               sidebarPanel(
                 
-                textInput("textInputVehicleID", 
-                          h3("Vehicle ID:"), 
-                          placeholder  = "Enter ID here"),
+                #textInput("textInputVehicleID", 
+                #          h3("Vehicle ID:"), 
+                #          placeholder  = "Enter ID here"),
+                
+                dataTableOutput("dynamicVehicleID"),
+                
+                
                 checkboxGroupInput("checkGroupLevels1", 
                                    h3("Options:"), 
                                    choices = list("Longest" = 1, 
                                                   "Shortest" = 2, 
                                                   "Median" = 3),
-                                   selected = c(1,2,3)),
+                                   #selected = c(1,2,3)
+                                   ),
                 checkboxGroupInput("checkGroupLevels2", 
                                    h3("Level:"), 
                                    choices = list("Single Part" = 1, 
                                                   "Component" = 2, 
                                                   "Vehicle" = 3),
-                                   selected = 1),
+                                   selected = 1
+                                   ),
                 radioButtons("radio", 
                              h3("Vehicle Types:"),
                              choices = list("All" = 1, 
@@ -110,14 +120,44 @@ body <- dashboardBody(
               # Main panel for displaying outputs ----
               mainPanel(
                 # Output: 
-                tmapOutput("map"), 
+                tmapOutput("map", width = "100%", height = 750), 
                 plotOutput("vehiclePlot")
               ),
             )   
     ),
     
     tabItem(tabName = "boxplot",
-            h2("Boxplot"), 
+            h2("Boxplot"),
+            # Sidebar layout with input and output definitions ----
+            sidebarLayout(
+              # Sidebar panel for inputs ----
+              sidebarPanel(
+                
+                checkboxGroupInput("checkGroupLevels1", 
+                                   h3("Options:"), 
+                                   choices = list("Vehicle Types" = 1, 
+                                                  "Components" = 2, 
+                                                  "Individual parts" = 3),
+                                   selected = c(1,2,3)
+                ),
+              ),
+              
+              # Main panel for displaying outputs ----
+              mainPanel(
+                # Output: 
+                plotOutput("boxPlot")
+              ),
+            )   
+    ),
+    
+    tabItem(tabName = "matFlow",
+            h2("Material Flow"), 
+            #dataTableOutput("dynamicVehicleID"),
+    ),
+    
+    tabItem(tabName = "dataSet",
+            h2("Data set"), 
+            dataTableOutput("dynamicDataSet")
     )
   )
 )
@@ -133,30 +173,21 @@ ui <- dashboardPage(
 
 #### SERVER FUNCTION #####
 
-# Define server logic required to draw a histogram ----
 server <- function(input, output) {
-  
-  # Histogram of the Old Faithful Geyser Data ----
-  # with requested number of bins
-  # This expression that generates a histogram is wrapped in a call
-  # to renderPlot to indicate that:
-  #
-  # 1. It is "reactive" and therefore should be automatically
-  #    re-executed when inputs (input$bins) change
-  # 2. Its output type is a plot
+
+  # load shapefile for germany
+  ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm1.shp")
   
   output$map <- renderTmap({
-    # load shapefile for germany
-    ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm2.shp")
-    
+
     map_germany <- tm_shape(ger_shp) +
       tm_borders() +
       tm_polygons(col = "lightblue1", 
                   alpha = 0.4, 
                   id = "NAME_2",
                   popup.vars = c("Bundesland: "="NAME_1")) +
-      tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
-      tm_compass(position = c("left", "top"), size = 2)
+      tm_scale_bar(position = c("left", "bottom"), width = 0.15) #+
+      #tm_compass(position = c("left", "top"), size = 2)
   })
   
   output$vehiclePlot <- renderPlot({
@@ -164,6 +195,43 @@ server <- function(input, output) {
       # TODO: Plot necessary data for search bar usage
     }
   })
+  
+  output$dynamicVehicleID <- renderDataTable(datatable(
+                                             mtcars["mpg"],
+                                             rownames = FALSE,
+                                             colnames = c("Vehicle ID"),
+                                             filter = "none",
+                                             selection="multiple",
+                                             options = list(scrollY = "200px", 
+                                                            scrollCollapse = TRUE,
+                                                            paging = FALSE,
+                                                            columnDefs = list(list(className = 'dt-left', targets = 0)),
+                                                            
+                                                            #columns.searchable = FALSE,
+                                                            #search = list(FALSE),
+                                                            #select = "single",
+                                                            select.items = "row",
+                                                            columns = list(searchable = FALSE),
+                                                            searching = TRUE,
+                                                            sDom  = '<"top">lfrt<"bottom">ip'
+                                                            )
+                                              )
+                                             )
+  
+  
+  
+  
+  output$boxPlot <- renderPlot({
+    
+      p <- ggplot(ToothGrowth, aes(x=dose, y=len)) + 
+        geom_boxplot()
+      
+      p
+  })
+  
+  
+  output$dynamicDataSet <- renderDataTable(mtcars)#, options = list(pageLength = 5))
+  
 }
 
 #### RUN 
