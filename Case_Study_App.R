@@ -70,6 +70,7 @@ komp_zu_teile <- lapply(list_komp, load_komp_zu_teile) %>%
 
 # from the Einzelteil IDs, create a list of all part types included
 
+
 list_teil <- unique(str_match(komp_zu_teile$Typ_Einzelteil, "(ID_T[:digit:]+)")[,1])
 print(list_teil)
 

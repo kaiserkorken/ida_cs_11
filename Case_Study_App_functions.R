@@ -176,18 +176,22 @@ load_metadata_teil <- function(ID_Teil) {
   if(ID_Teil_num == "T04") {
     teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
       select(starts_with(column_of_interest))
+
   }
   
   if(ID_Teil_num == "T05") {
     teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
+
       select(starts_with(column_of_interest))%>%
       combine_columns()
     #names(teil_meta)<-gsub(".x","",names(teil_meta))
+
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
     teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T06") {
+    
     teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
       select(starts_with(column_of_interest))
   }
@@ -215,8 +219,10 @@ load_metadata_teil <- function(ID_Teil) {
   
   if(ID_Teil_num == "T23") {
     teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
+
       select(starts_with(column_of_interest))%>%
       combine_columns()
+
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
     teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
   }
@@ -234,8 +240,10 @@ load_metadata_teil <- function(ID_Teil) {
   }
   
   if(ID_Teil_num == "T25") {
+    
     teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
       select(starts_with(column_of_interest))
+
   }
 
   # select columns and change ID_Teil to "ID_Einzelteil" for combining
