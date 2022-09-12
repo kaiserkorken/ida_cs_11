@@ -87,14 +87,14 @@ body <- dashboardBody(
                 
                 textInput("textInputVehicleID", 
                           h3("Vehicle ID:"), 
-                          value = "Enter ID here"),
-                checkboxGroupInput("checkGroupLevels", 
+                          placeholder  = "Enter ID here"),
+                checkboxGroupInput("checkGroupLevels1", 
                                    h3("Options:"), 
                                    choices = list("Longest" = 1, 
                                                   "Shortest" = 2, 
                                                   "Median" = 3),
                                    selected = c(1,2,3)),
-                checkboxGroupInput("checkGroupLevels", 
+                checkboxGroupInput("checkGroupLevels2", 
                                    h3("Level:"), 
                                    choices = list("Single Part" = 1, 
                                                   "Component" = 2, 
@@ -110,13 +110,14 @@ body <- dashboardBody(
               # Main panel for displaying outputs ----
               mainPanel(
                 # Output: 
-                tmapOutput("map")
+                tmapOutput("map"), 
+                plotOutput("vehiclePlot")
               ),
             )   
     ),
     
     tabItem(tabName = "boxplot",
-            h2("Boxplot")
+            h2("Boxplot"), 
     )
   )
 )
@@ -145,16 +146,23 @@ server <- function(input, output) {
   # 2. Its output type is a plot
   
   output$map <- renderTmap({
-
     # load shapefile for germany
     ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm2.shp")
     
     map_germany <- tm_shape(ger_shp) +
       tm_borders() +
-      tm_polygons() +
-      #tm_logo("datasets/chapter_2/bavaria.png", height = 2) +
+      tm_polygons(col = "lightblue1", 
+                  alpha = 0.4, 
+                  id = "NAME_2",
+                  popup.vars = c("Bundesland: "="NAME_1")) +
       tm_scale_bar(position = c("left", "bottom"), width = 0.15) +
       tm_compass(position = c("left", "top"), size = 2)
+  })
+  
+  output$vehiclePlot <- renderPlot({
+    if (input$textInputVehicleID > 0) {
+      # TODO: Plot necessary data for search bar usage
+    }
   })
 }
 
