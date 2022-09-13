@@ -1,4 +1,7 @@
 data/*
 Data/*
+.Rproj.user
+.DS_Store
 .Rhistory
 General_Tasks_knit.R
+Final_Data_Group_11.csv
