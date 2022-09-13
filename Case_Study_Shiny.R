@@ -52,7 +52,7 @@ if (!require(htmltools)) {
 
 
 # for loading our data
-library(raster)
+#library(raster)
 library(readr)
 library(readxl)
 library(sf)
@@ -67,7 +67,9 @@ library(tmap)
 library(viridis)
 library(rgdal)
 
-#library(DT)
+library(dplyr)
+library(DT)
+library(reshape2)
 
 #### UI #####
 
@@ -96,18 +98,18 @@ body <- dashboardBody(
                 dataTableOutput("dynamicVehicleID"),
                 
                 
-                checkboxGroupInput("checkGroupLevels1", 
+                checkboxGroupInput("checkGroupDistanceComparison", 
                                    h3("Options:"), 
                                    choices = list("Longest" = 1, 
                                                   "Shortest" = 2, 
                                                   "Median" = 3),
                                    #selected = c(1,2,3)
                                    ),
-                checkboxGroupInput("checkGroupLevels2", 
+                checkboxGroupInput("checkGroupLevelsMap", 
                                    h3("Level:"), 
-                                   choices = list("Single Part" = 1, 
-                                                  "Component" = 2, 
-                                                  "Vehicle" = 3),
+                                   choices = list("Single Part to component value" = 1, 
+                                                  "Component to OEM" = 2, 
+                                                  "OEM to distribution center" = 3),
                                    selected = 1
                                    ),
                 radioButtons("radio", 
@@ -132,12 +134,12 @@ body <- dashboardBody(
             sidebarLayout(
               # Sidebar panel for inputs ----
               sidebarPanel(
-                
-                checkboxGroupInput("checkGroupLevels1", 
-                                   h3("Options:"), 
-                                   choices = list("Vehicle Types" = 1, 
-                                                  "Components" = 2, 
-                                                  "Individual parts" = 3),
+    
+                checkboxGroupInput("checkGroupLevelsBoxplot", 
+                                   h3("Level:"), 
+                                   choices = list("Single Part to component value" = 1, 
+                                                  "Component to OEM" = 2, 
+                                                  "OEM to distribution center" = 3),
                                    selected = c(1,2,3)
                 ),
               ),
@@ -173,15 +175,24 @@ ui <- dashboardPage(
 
 #### SERVER FUNCTION #####
 
+## data aggregation
+
+
 server <- function(input, output) {
+  
+  ## map
 
   # load shapefile for germany
   ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm3.shp")
   
   output$map <- renderTmap({
+    
+
+    
     coord<- data.frame(Breitengrad=NA, Längengrad=NA)%>%
       na.omit()
-    if (any(final_data$ID_Fahrzeug == input$textInputVehicleID)) {
+
+    if (any(final_data$ID_Fahrzeug == vehicleID)) {
       # TODO: Plot necessary data for search bar usage
       row_of_content <- final_data[which(final_data$ID_Fahrzeug == input$textInputVehicleID),]
       
@@ -212,18 +223,22 @@ server <- function(input, output) {
       #tm_compass(position = c("left", "top"), size = 2)
   })
   
+  ## vehicle plot
+  
   output$vehiclePlot <- renderPlot({
     if (input$textInputVehicleID > 0) {
       # TODO: Plot necessary data for search bar usage
     }
   })
   
+  ## vehicle ID table and search
+  
   output$dynamicVehicleID <- renderDataTable(datatable(
                                              mtcars["mpg"],
                                              rownames = FALSE,
                                              colnames = c("Vehicle ID"),
                                              filter = "none",
-                                             selection="multiple",
+                                             selection="single",
                                              options = list(scrollY = "200px", 
                                                             scrollCollapse = TRUE,
                                                             paging = FALSE,
@@ -243,12 +258,47 @@ server <- function(input, output) {
   
   
   
+  
+  ## boxplot
+
   output$boxPlot <- renderPlot({
     
-      p <- ggplot(ToothGrowth, aes(x=dose, y=len)) + 
-        geom_boxplot()
+    mtcars_by_cyl <- mtcars %>%
+                        dplyr::select(cyl, hp) %>%
+                        group_by(cyl) #%>%
+                        #summarize(total_hp = sum(hp))
+    
+    dist_vs_type <- mtcars_by_cyl
+    colnames(dist_vs_type) = c("type", "total_dist")
+#    dist_vs_type[dist_vs_type == 4] = "Single Part to component value"
+#    dist_vs_type[dist_vs_type == 5] = "Component to OEM"
+#    dist_vs_type[dist_vs_type == 6] = "OEM to distribution center"
+  
+#    If you have already made numeric vectors called "a", "b", and "c"
+    single_to_component <- 1:10
+    component_to_oem <- sqrt(1:200)
+    oem_to_distribution <- log2(1:500)
+#    type_shortcut <- c("single_to_component","component_to_oem","oem_to_distribution")
+
+    dist_vs_type <- lapply(type_shortcut, get, envir=environment())
+    names(dist_vs_type) <- c("Single Part to Component", "Component to OEM", "OEM to Distribution center")
+    #print(head(dist_vs_type))
+    #boxplot(dist_vs_type)
+
+    levels_selected <- input$checkGroupLevelsBoxplot
+    data_to_plot <- dist_vs_type[as.numeric(levels_selected)] %>% # choose data according to selection 
+                      melt() #melt into a long vector
+    colnames(data_to_plot) = c("total_dist","type")
+    
+    #print(levels_selected)
+    print(head(data_to_plot))
+    
+    ggplot(data_to_plot, aes(x=type,y=total_dist)) + 
+      geom_boxplot(fill="slateblue", alpha=0.2) + 
+      xlab("") +
+      ylab("Distanz")
       
-      p
+      
   })
   
   
