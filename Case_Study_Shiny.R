@@ -219,13 +219,11 @@ server <- function(input, output) {
         full_join(vehicle_location,by = c("Breitengrad", "Längengrad"))
       print(coord)
       
-      print(str_split(reverse_geo(50.74202, 7.120073), ", ")[[3]][5]) #kann gelöscht werden
-      
-      
     }
+    print(str_split(reverse_geo(50.74202, 7.120073), ", ")[[3]][5]) #kann gelöscht werden
     
     filtermap <- ger_shp%>%
-      #filer()
+      #filter()
       filter(NAME_3 == "Rottweil" | NAME_3 == "Berlin") #kann gelöscht werden
     
     
