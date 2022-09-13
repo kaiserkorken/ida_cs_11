@@ -116,8 +116,24 @@ The available tables represent a typical data base structure. How is it called?
     * Avoiding errors when updating data
   * Data providers can be allowed selective access to the respective files, keeping permissions restrictive.
   
-  
-  
+
+
+# Task 4
+## Assignment
+Which data types do the attributes of the registration table “Zulassungen_aller_Fahrzeuge”
+have? Put your answers into a table which is integrated into your Markdown document and
+describe the characteristics of the data type(s).
+
+## Data types of Zulassungen_aller_Fahrzeuge.csv
+| Column name | Data type | Explanation |
+| ------------|-----------|-------------|
+|**[No Name]**| character | This column contains a unique ID for each. It is essentially a line number, but in text form. |
+|**IDNummer** | character | The vehicle ID, as used in the files in Data/Fahrzeuge |
+|**Gemeinden**| character | The name of the municipality where the vehicle is registered |
+|**Zulassung**| Date      | The date when the vehicle was registered |
+
+
+
 # Task 5
 ## Assignment
 You want to publish your application. Why does it make sense to store the records on the database of a server?
