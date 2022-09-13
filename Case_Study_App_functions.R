@@ -7,6 +7,8 @@ library(dplyr)
 
 # consolidate similar columns
 consolidate_cols <- function(frame, target_columns) {
+	
+	frame <- as.data.frame(frame)
 
 	for (i in target_columns) {
 		print("Now consolidating column:")
