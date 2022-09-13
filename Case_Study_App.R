@@ -70,8 +70,7 @@ komp_zu_teile <- lapply(list_komp, load_komp_zu_teile) %>%
 
 # from the Einzelteil IDs, create a list of all part types included
 
-
-list_teil <- unique(str_match(komp_zu_teile$Typ_Einzelteil, "(ID_T[:digit:]+)")[,1])
+list_teil <- str_match(unique(komp_zu_teile$Typ_Einzelteil), "(ID_T[:digit:]+)")[,1]
 print(list_teil)
 
 
@@ -84,7 +83,7 @@ print(list_teil)
 
 teil_meta <- lapply(list_teil, load_metadata_teil) %>%
   rbindlist()
-komp_zu_teile<-inner_join(komp_zu_teile, teil_meta,by="ID_Einzelteil", suffix=c("_Komponente","_Einzelteil"))
+komp_zu_teile_werk<-inner_join(komp_zu_teile, teil_meta,by="ID_Einzelteil", suffix=c("_Komponente","_Einzelteil"))
 
 
 ############################
@@ -95,9 +94,12 @@ komp_zu_teile<-inner_join(komp_zu_teile, teil_meta,by="ID_Einzelteil", suffix=c(
 geodata <- lapply(dir(file.path("Data","Geodaten"), pattern="Werke", full.names=TRUE), fread, select=1:5, keepLeadingZeros=FALSE) %>%
 	rbindlist() %>%
 	mutate(Werk = as.numeric(gsub("O","",Werk))) %>%
-  na.omit()%>%
 	rename(Längengrad = 5)
+
+zulassung<- read_csv2("Data/Zulassungen/Zulassungen_alle_Fahrzeuge.csv")%>%
+  select(-contains("...1"))
 	
+#geo_gemeinde<- read_csv("Additional_files/gemeinde_bundesland.csv")
 
 
 #############################
@@ -108,16 +110,21 @@ geodata <- lapply(dir(file.path("Data","Geodaten"), pattern="Werke", full.names=
 # join Fahrzeug->Komponente and Komponente->Einzelteil table
 names(fz_zu_komp)<-gsub("Werksnummer","Werksnummer_Fahrzeug",names(fz_zu_komp))
 fz_komp_teile <- fz_zu_komp %>%
-	inner_join(komp_zu_teile,by="ID_Komponente")
+	inner_join(komp_zu_teile_werk,by="ID_Komponente")
 fz_komp_teile$Werksnummer_Einzelteil<-as.double(fz_komp_teile$Werksnummer_Einzelteil)
+fz_komp_teile_zul <- fz_komp_teile %>%
+  inner_join(zulassung,by=c("ID_Fahrzeug" = "IDNummer"))#%>%
 
 
 summary(fz_komp_teile)
 
 # join geodata (for vehicles and component manufacturer
-fz_komp_teile_geo <- fz_komp_teile %>%
+fz_komp_teile_geo <- fz_komp_teile_zul %>%
 	inner_join(geodata, by=c(Werksnummer_Fahrzeug="Werk")) %>%
 	inner_join(geodata, by=c(Werksnummer_Komponente="Werk"), suffix=c("","_Komponente"))%>%
-  inner_join(geodata, by=c(Werksnummer_Einzelteil="Werk"),suffix=c("_Fahrzeug","_Einzelteil"))
+  inner_join(geodata, by=c(Werksnummer_Einzelteil="Werk"),suffix=c("","_Einzelteil"))%>%
+  inner_join(geodata,by=c("Gemeinden" = "ORT"), suffix=c("_Fahrzeug","_Gemeinden"))
 
+
+write.csv(fz_komp_teile_geo,paste0(getwd(),"/Final_dataset_group_11.csv"), row.names = FALSE)
 
