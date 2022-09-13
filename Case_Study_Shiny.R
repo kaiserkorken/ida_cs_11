@@ -294,9 +294,17 @@ server <- function(input, output) {
     print(head(data_to_plot))
     
     ggplot(data_to_plot, aes(x=type,y=total_dist)) + 
-      geom_boxplot(fill="slateblue", alpha=0.2) + 
+      geom_boxplot() +
+      scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+      geom_jitter(color="black", size=0.4, alpha=0.9) +
+      theme_ipsum() +
+      theme(
+        legend.position="none",
+        plot.title = element_text(size=11)
+      ) +
+      ggtitle("Total distance travelled by type of material flow") +
       xlab("") +
-      ylab("Distanz")
+      ylab("Distance")
       
       
   })
