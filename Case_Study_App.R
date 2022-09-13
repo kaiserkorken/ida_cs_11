@@ -101,6 +101,15 @@ geodata <- lapply(dir(file.path("Data","Geodaten"), pattern="Werke", full.names=
 
 
 #############################
+# REGISTRATION DATA
+#############################
+
+regdata <- fread(file.path("Data","Zulassungen","Zulassungen_alle_Fahrzeuge.csv"),drop=1) %>%
+  rename(Datum_Zulassung = "Zulassung",ORT_Zulassung = "Gemeinden")
+
+
+
+#############################
 # LINKING EVERYTHING TOGETHER
 #############################
 
@@ -119,6 +128,10 @@ fz_komp_teile_geo <- fz_komp_teile %>%
 	inner_join(geodata, by=c(Werksnummer_Fahrzeug="Werk")) %>%
 	inner_join(geodata, by=c(Werksnummer_Komponente="Werk"), suffix=c("","_Komponente"))%>%
   inner_join(geodata, by=c(Werksnummer_Einzelteil="Werk"),suffix=c("_Fahrzeug","_Einzelteil"))
+
+# join registration data
+fz_komp_teile_geo <- fz_komp_teile_geo %>%
+  left_join(regdata,by=c(ID_Fahrzeug="IDNummer"))
 
 
 # calculate distances of material flow
@@ -139,3 +152,5 @@ fz_komp_teile_geo <- fz_komp_teile_geo %>%
   mutate(Distanz_Komponente_zu_Fahrzeug_in_m = calc_distance_in_m(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) #%>%
 
 summary(fz_komp_teile_geo)
+
+fwrite(fz_komp_teile_geo, file="Final_Data_Group_11.csv")
