@@ -121,3 +121,21 @@ fz_komp_teile_geo <- fz_komp_teile %>%
   inner_join(geodata, by=c(Werksnummer_Einzelteil="Werk"),suffix=c("_Fahrzeug","_Einzelteil"))
 
 
+# calculate distances of material flow
+
+library(geosphere)
+#
+# calculate shortest distance between Points A and B given by longitude and latitude
+distance_in_m <- function(longA,latA,longB,latB) {
+  distm(c(longA, latA), c(longB, latB), fun = distHaversine)
+}
+# calculate shortest distances between vectors of Points A and B given by longitude and latitude
+calc_distance_in_m <- function(longA_vec, latA_vec, longB_vec, latB_vec) {
+  mapply(distance_in_m, longA_vec, latA_vec, longB_vec, latB_vec)
+}
+
+fz_komp_teile_geo <- fz_komp_teile_geo %>%
+  mutate(Distanz_Einzelteil_zu_Komponente_in_m = calc_distance_in_m(Längengrad_Einzelteil, Breitengrad_Einzelteil, Längengrad_Komponente, Breitengrad_Komponente)) %>%
+  mutate(Distanz_Komponente_zu_Fahrzeug_in_m = calc_distance_in_m(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) #%>%
+
+summary(fz_komp_teile_geo)
