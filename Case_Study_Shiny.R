@@ -71,6 +71,8 @@ library(dplyr)
 library(DT)
 library(reshape2)
 
+library(tidygeocoder)
+
 #### UI #####
 
 sidebar <- dashboardSidebar(
@@ -91,9 +93,9 @@ body <- dashboardBody(
               # Sidebar panel for inputs ----
               sidebarPanel(
                 
-                #textInput("textInputVehicleID", 
-                #          h3("Vehicle ID:"), 
-                #          placeholder  = "Enter ID here"),
+                textInput("textInputVehicleID", 
+                          h3("Vehicle ID:"), 
+                          placeholder  = "Enter ID here"),
                 
                 dataTableOutput("dynamicVehicleID"),
                 
@@ -191,16 +193,20 @@ server <- function(input, output) {
     
     coord<- data.frame(Breitengrad=NA, Längengrad=NA)%>%
       na.omit()
+    
+    vehicleID <- input$textInputVehicleID #kann gelöscht werden
+    final_data <- fz_komp_teile_geo       #kann gelöscht werden
 
     if (any(final_data$ID_Fahrzeug == vehicleID)) {
       # TODO: Plot necessary data for search bar usage
-      row_of_content <- final_data[which(final_data$ID_Fahrzeug == input$textInputVehicleID),]
+      row_of_content <- final_data[which(final_data$ID_Fahrzeug == vehicleID),]
       
       single_part_location <- coord
       component_location <- coord
       vehicle_location <- coord
       
       single_part_location <- row_of_content[,c("Breitengrad_Einzelteil", "Längengrad_Einzelteil")]
+      print(single_part_location)
       names(single_part_location) <- gsub("_Einzelteil","", names(single_part_location))      
       component_location <- row_of_content[,c("Breitengrad_Komponente", "Längengrad_Komponente")]
       names(component_location) <- gsub("_Komponente","", names(component_location))
@@ -212,24 +218,38 @@ server <- function(input, output) {
         full_join(single_part_location,by = c("Breitengrad", "Längengrad"))%>%
         full_join(vehicle_location,by = c("Breitengrad", "Längengrad"))
       print(coord)
+      
     }
+    print(str_split(reverse_geo(50.74202, 7.120073), ", ")[[3]][5]) #kann gelöscht werden
+    
+    filtermap <- ger_shp%>%
+      #filter()
+      filter(NAME_3 == "Rottweil" | NAME_3 == "Berlin") #kann gelöscht werden
+    
+    
     map_germany <- tm_shape(ger_shp) +
       tm_borders() +
       tm_polygons(col = "lightblue1", 
                   alpha = 0.4, 
                   id = "NAME_3",
                   popup.vars = c("Bundesland: "="NAME_1")) +
-      tm_scale_bar(position = c("left", "bottom"), width = 0.15) #+
-      #tm_compass(position = c("left", "top"), size = 2)
+      tm_scale_bar(position = c("left", "bottom"), width = 0.15) + #+ 
+      #tm_compass(position = c("left", "top"), size = 2) 
+  
+    
+    tm_shape(filtermap) +
+      tm_dots(id = "NAME_3",
+              popup.vars = c("Bundesland: "="NAME_1")) 
+    
   })
   
   ## vehicle plot
   
-  output$vehiclePlot <- renderPlot({
-    if (input$textInputVehicleID > 0) {
-      # TODO: Plot necessary data for search bar usage
-    }
-  })
+  #output$vehiclePlot <- renderPlot({
+  #  if (input$textInputVehicleID > 0) {
+  #    # TODO: Plot necessary data for search bar usage
+  #  }
+  #})
   
   ## vehicle ID table and search
   
