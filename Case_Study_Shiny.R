@@ -100,7 +100,6 @@ body <- dashboardBody(
                 
                 #dataTableOutput("dynamicVehicleID"),
                 
-                
                 checkboxGroupInput("checkGroupDistanceComparison", 
                                    h3("Options:"), 
                                    choices = list("Longest" = 1, 
@@ -199,6 +198,7 @@ server <- function(input, output) {
                 id = "NAME_3",
                 popup.vars = c("Bundesland: "="NAME_1")) +
     tm_scale_bar(position = c("left", "bottom"), width = 0.15)
+  
   # Map output
   output$map <- renderTmap({
     
@@ -253,45 +253,40 @@ server <- function(input, output) {
         full_join(state_capital_location,by = c("Breitengrad", "Längengrad"))%>%
         full_join(gemeinde_location,by = c("Breitengrad", "Längengrad"))
       # set filter for map 
-      coord_sf <-st_as_sf(coord,coords = c( "Längengrad","Breitengrad"), crs=4326)
+      coord_sf <- st_as_sf(coord, coords = c("Längengrad","Breitengrad"), crs=4326)
       filtermap <- coord_sf
       # switch to 1
-      inti<-1
+      inti <- 1
     }
+    
    #default when switch is 0
    if(!inti){
      map_germany <- map_germany  +
        tm_shape(filtermap) + tm_dots(size = 0.000001) 
    }else if(inti){
-     
      #built connection lines from route
      if("1" %in% checkB) {
-       teil_zu_komp<-data.frame(c(single_part_location, component_location))
-       map_germany <- getFilterLines(teil_zu_komp,map_germany)
-                                
+       teil_zu_komp <- data.frame(c(single_part_location, component_location))
+       map_germany <- getFilterLines(teil_zu_komp, map_germany)
      }
-     
      if("2" %in% checkB ){
-       komp_zu_fahr<-data.frame(c(component_location, vehicle_location))
-       map_germany <- getFilterLines(komp_zu_fahr,map_germany)
-       
+       komp_zu_fahr <- data.frame(c(component_location, vehicle_location))
+       map_germany <- getFilterLines(komp_zu_fahr, map_germany)
      }
      if("3" %in% checkB) {
-       fahr_zu_stadt<-data.frame(c(vehicle_location, state_capital_location))
-       map_germany <- getFilterLines(fahr_zu_stadt,map_germany)
-       
+       fahr_zu_stadt <- data.frame(c(vehicle_location, state_capital_location))
+       map_germany <- getFilterLines(fahr_zu_stadt, map_germany)
      }
      if("4" %in% checkB ){
-       stadt_zu_kunde<-data.frame(c(state_capital_location, gemeinde_location))
-       map_germany <- getFilterLines(stadt_zu_kunde,map_germany)
+       stadt_zu_kunde <- data.frame(c(state_capital_location, gemeinde_location))
+       map_germany <- getFilterLines(stadt_zu_kunde, map_germany)
      }
-
    }
     # print Map
     map_germany <- map_germany +
        tm_shape(filtermap) + tm_dots()
-
   })
+  
   ## vehicle plot
   
   #output$vehiclePlot <- renderPlot({
