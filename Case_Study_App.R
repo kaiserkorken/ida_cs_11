@@ -70,9 +70,8 @@ komp_zu_teile <- lapply(list_komp, load_komp_zu_teile) %>%
 
 # from the Einzelteil IDs, create a list of all part types included
 
-list_teil <- str_match(unique(komp_zu_teile$Typ_Einzelteil), "(ID_T[:digit:]+)")[,1]
-print(list_teil)
 
+list_teil <- str_match(unique(komp_zu_teile$Typ_Einzelteil), "(ID_T[:digit:]+)")[,1]
 
 
 ############################
@@ -107,6 +106,15 @@ geo_state_city <- read_csv("Additional_files/Gemeinde_Bund_HS_Geo.csv")
 
 
 #############################
+# REGISTRATION DATA
+#############################
+
+regdata <- fread(file.path("Data","Zulassungen","Zulassungen_alle_Fahrzeuge.csv"),drop=1) %>%
+  rename(Datum_Zulassung = "Zulassung",ORT_Zulassung = "Gemeinden")
+
+
+
+#############################
 # LINKING EVERYTHING TOGETHER
 #############################
 
@@ -131,7 +139,6 @@ fz_komp_teile_geo <- fz_komp_teile_zul %>%
   inner_join(geo_state_city, by=c("Gemeinden"="Gemeinde"), suffix=c("_Gemeinde","_Hauptstadt"))
 
 
-write.csv(fz_komp_teile_geo,paste0(getwd(),"/Final_dataset_group_11.csv"), row.names = FALSE)
 
 # calculate distances of material flow
 
@@ -146,8 +153,12 @@ calc_distance_in_m <- function(longA_vec, latA_vec, longB_vec, latB_vec) {
   mapply(distance_in_m, longA_vec, latA_vec, longB_vec, latB_vec)
 }
 
-fz_komp_teile_geo <- fz_komp_teile_geo %>%
+fz_komp_teile_geo_dist <- fz_komp_teile_geo %>%
   mutate(Distanz_Einzelteil_zu_Komponente_in_m = calc_distance_in_m(Längengrad_Einzelteil, Breitengrad_Einzelteil, Längengrad_Komponente, Breitengrad_Komponente)) %>%
-  mutate(Distanz_Komponente_zu_Fahrzeug_in_m = calc_distance_in_m(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) #%>%
-
+  mutate(Distanz_Komponente_zu_Fahrzeug_in_m = calc_distance_in_m(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) %>%
+  mutate(Distanz_Fahrzeug_zu_Hauptstadt_in_m = calc_distance_in_m( Längengrad_Fahrzeug, Breitengrad_Fahrzeug, Längengrad_Hauptstadt, Breitengrad_Hauptstadt))%>%
+  mutate(Distanz_Hauptstadt_zu_Gemeinde_in_m = calc_distance_in_m( Längengrad_Hauptstadt, Breitengrad_Hauptstadt, Längengrad_Gemeinde, Breitengrad_Gemeinde ))
 summary(fz_komp_teile_geo)
+
+write.csv(fz_komp_teile_geo_dist,paste0(getwd(),"/Final_dataset_group_11.csv"), row.names = FALSE)
+fz_komp_teile_geo <-final_data
