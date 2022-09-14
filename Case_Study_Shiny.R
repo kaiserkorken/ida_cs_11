@@ -66,12 +66,14 @@ library(grid)
 library(tmap)
 library(viridis)
 library(rgdal)
-
+library(tmaptools)
 library(dplyr)
 library(DT)
 library(reshape2)
 
 library(tidygeocoder)
+
+source("Case_Study_App_functions.R")
 
 #### UI #####
 
@@ -111,9 +113,10 @@ body <- dashboardBody(
                                    h3("Level:"), 
                                    choices = list("Single Part to component value" = 1, 
                                                   "Component to OEM" = 2, 
-                                                  "OEM to distribution center" = 3),
-                                   selected = 1
-                                   ),
+                                                  "OEM to distribution center" = 3,
+                                                  "OEM to state capital" = 4),
+                                   selected = c(1,2,3,4)
+                ),
                 radioButtons("radio", 
                              h3("Vehicle Types:"),
                              choices = list("All" = 1, 
@@ -141,8 +144,9 @@ body <- dashboardBody(
                                    h3("Level:"), 
                                    choices = list("Single Part to component value" = 1, 
                                                   "Component to OEM" = 2, 
-                                                  "OEM to distribution center" = 3),
-                                   selected = c(1,2,3)
+                                                  "OEM to distribution center" = 3,
+                                                  "OEM to state capital" = 4),
+                                   selected = c(1,2,3,4)
                 ),
               ),
               
@@ -179,68 +183,104 @@ ui <- dashboardPage(
 
 ## data aggregation
 
+final_data <- read_csv("Final_dataset_group_11.csv")
 
 server <- function(input, output) {
   
   ## map
-
+  
   # load shapefile for germany
   ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm3.shp")
   
+  map_germany <- tm_shape(ger_shp) +
+    tm_borders() +
+    tm_polygons(col = "lightblue1", 
+                alpha = 0.4, 
+                id = "NAME_3",
+                popup.vars = c("Bundesland: "="NAME_1")) +
+    tm_scale_bar(position = c("left", "bottom"), width = 0.15)
+  
   output$map <- renderTmap({
-    
-
     
     coord<- data.frame(Breitengrad=NA, Längengrad=NA)%>%
       na.omit()
+    single_part_location <- coord
+    component_location <- coord
+    vehicle_location <- coord
+    gemeinde_location <- coord
+    state_capital_location <- coord
     
-    vehicleID <- input$textInputVehicleID #kann gelöscht werden
-    final_data <- fz_komp_teile_geo       #kann gelöscht werden
+    vehicleID <- input$textInputVehicleID 
+    
+  
+    filtermap <- ger_shp %>%
+      filter(NAME_3 == "Berlin") #default
+    checkB<- input$checkGroupLevelsMap
 
+    inti<-0
+    
+    vehicleID<-"11-1-12-600035" # kann gelöscht werden
+    
     if (any(final_data$ID_Fahrzeug == vehicleID)) {
       # TODO: Plot necessary data for search bar usage
       row_of_content <- final_data[which(final_data$ID_Fahrzeug == vehicleID),]
+      state_capital<-unique(row_of_content$Hauptstadt)
       
-      single_part_location <- coord
-      component_location <- coord
-      vehicle_location <- coord
-      
+ 
       single_part_location <- row_of_content[,c("Breitengrad_Einzelteil", "Längengrad_Einzelteil")]
-      print(single_part_location)
-      names(single_part_location) <- gsub("_Einzelteil","", names(single_part_location))      
+      names(single_part_location) <- gsub("_Einzelteil","", names(single_part_location))
+      
       component_location <- row_of_content[,c("Breitengrad_Komponente", "Längengrad_Komponente")]
       names(component_location) <- gsub("_Komponente","", names(component_location))
+
       vehicle_location <- row_of_content[,c("Breitengrad_Fahrzeug", "Längengrad_Fahrzeug")]
       names(vehicle_location) <- gsub("_Fahrzeug","", names(vehicle_location))
-      
-      print(vehicle_location)
+        state_capital_location <- row_of_content[,c("Breitengrad_Hauptstadt", "Längengrad_Hauptstadt")]
+        names(state_capital_location) <- gsub("_Hauptstadt","", names(state_capital_location))
+        
+      gemeinde_location <- row_of_content[,c("Breitengrad_Gemeinde", "Längengrad_Gemeinde")]
+      names(gemeinde_location) <- gsub("_Gemeinde","", names(gemeinde_location))
+
       coord<- coord %>% full_join(single_part_location,by = c("Breitengrad", "Längengrad"))%>%
-        full_join(single_part_location,by = c("Breitengrad", "Längengrad"))%>%
-        full_join(vehicle_location,by = c("Breitengrad", "Längengrad"))
-      print(coord)
-      
+        full_join(component_location,by = c("Breitengrad", "Längengrad"))%>%
+        full_join(vehicle_location,by = c("Breitengrad", "Längengrad"))%>%
+        full_join(state_capital_location,by = c("Breitengrad", "Längengrad"))%>%
+        full_join(gemeinde_location,by = c("Breitengrad", "Längengrad"))
+       
+      coord_sf <-st_as_sf(coord,coords = c( "Längengrad","Breitengrad"), crs=4326)
+     filtermap <- coord_sf
+     inti<-1
+
     }
-    print(str_split(reverse_geo(50.74202, 7.120073), ", ")[[3]][5]) #kann gelöscht werden
     
-    filtermap <- ger_shp%>%
-      #filter()
-      filter(NAME_3 == "Rottweil" | NAME_3 == "Berlin") #kann gelöscht werden
-    
-    
-    map_germany <- tm_shape(ger_shp) +
-      tm_borders() +
-      tm_polygons(col = "lightblue1", 
-                  alpha = 0.4, 
-                  id = "NAME_3",
-                  popup.vars = c("Bundesland: "="NAME_1")) +
-      tm_scale_bar(position = c("left", "bottom"), width = 0.15) + #+ 
-      #tm_compass(position = c("left", "top"), size = 2) 
-  
-    
-    tm_shape(filtermap) +
-      tm_dots(id = "NAME_3",
-              popup.vars = c("Bundesland: "="NAME_1")) 
-    
+   if(!inti){
+     map_germany <- map_germany  +
+       tm_shape(filtermap) + tm_dots(size = 0.000001) 
+   }else if(inti){
+     
+     if("1" %in% checkB) {
+       teil_zu_komp<-data.frame(c(single_part_location, component_location))
+       map_germany <- getFilterLines(teil_zu_komp,map_germany)                                
+     }
+     
+     if("2" %in% checkB ){
+       komp_zu_fahr<-data.frame(c(component_location, vehicle_location))
+       map_germany <- getFilterLines(komp_zu_fahr,map_germany)       
+     }
+     
+     if("3" %in% checkB) {
+       fahr_zu_stadt<-data.frame(c(vehicle_location, state_capital_location))
+       map_germany <- getFilterLines(fahr_zu_stadt,map_germany)       
+     }
+     
+     if("4" %in% checkB ){
+       stadt_zu_kunde<-data.frame(c(state_capital_location, gemeinde_location))
+       map_germany <- getFilterLines(stadt_zu_kunde,map_germany)
+     }
+    }
+    map_germany <- map_germany +
+       tm_shape(filtermap) + tm_dots()
+
   })
   
   ## vehicle plot
