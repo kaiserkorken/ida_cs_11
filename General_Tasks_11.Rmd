@@ -7,7 +7,7 @@ output:
 ---
 
 
-Loading libraries for data import, analysis, plotting, distribution fitting
+Loading libraries for data import, analysis, plotting, distribution fitting, string matching, pretty printing data frames and tables
 
 ```{r, message=FALSE}
 
@@ -15,6 +15,8 @@ library(dplyr)
 library(data.table)
 library(plotly)
 library(MASS)
+library(stringr)
+library(knitr)
 ```
 
 # Task 1
@@ -118,6 +120,74 @@ The available tables represent a typical data base structure. How is it called?
   
 
 
+# Task 3
+## Assignment
+How many of the parts T16 ended up in vehicles registered in Adelshofen?
+
+## Importing and filtering the relevant data
+Part 16 is used in the components K2LE2 and K2ST2 (seats). Therefore, this analysis needs:
+
+  * The component -> part link files for both components
+  * The vehicle -> component files for all vehicle models
+  * The registration data
+  
+  * The component -> part link files for both components. The two files do not have the same column names, so they are loaded separately using the fread() function and their column names (specifically the column containing the component ID) are harmonised. Then, the columns linking to other parts are removed, keeping only the columns "ID_T16" and "ID_Komponente".
+```{r}
+
+K2LE2_to_part <- fread(file.path("Data","Komponente","Bestandteile_Komponente_K2LE2.csv"), header=TRUE, drop=1) %>%
+  rename("ID_Komponente" = "ID_K2LE2") %>%
+  dplyr::select(ID_T16, ID_Komponente)
+K2ST2_to_part <- fread(file.path("Data","Komponente","Bestandteile_Komponente_K2ST2.csv"), header=TRUE, drop=1) %>%
+  rename("ID_Komponente" = "ID_K2ST2") %>%
+  dplyr::select(ID_T16, ID_Komponente)
+
+component_part <- rbindlist(list(K2LE2_to_part,K2ST2_to_part))
+```
+The resulting data table, component_part, has `r nrow(component_part)` entries, so part 16 has been installed `r nrow(component_part)` times.
+
+  * The vehicle -> component files for all four vehicle models. These all have the same column names, so they are loaded all together by using the lapply() function to apply the fread() function to the four files. They are then joined together into one table, which is then filtered for vehicles with the components K2LE2 and K2ST2.
+```{r}
+vehicle_component_files <- c(file.path("Data","Fahrzeug","Bestandteile_Fahrzeuge_OEM1_Typ11.csv"),
+                           file.path("Data","Fahrzeug","Bestandteile_Fahrzeuge_OEM1_Typ12.csv"),
+                           file.path("Data","Fahrzeug","Bestandteile_Fahrzeuge_OEM2_Typ21.csv"),
+                           file.path("Data","Fahrzeug","Bestandteile_Fahrzeuge_OEM2_Typ22.csv"))
+
+vehicle_component <- lapply(vehicle_component_files, fread, header=TRUE, drop=1) %>%
+  rbindlist()
+
+vehicle_component_filtered <- vehicle_component %>%
+  filter(str_detect(ID_Sitze,"K2LE2") | str_detect(ID_Sitze,"K2ST2"))
+```
+The resulting data table, vehicle_component_filtered, has `r nrow(vehicle_component_filtered)` entries, so the components containing part 16 have been installed `r nrow(vehicle_component_filtered)` times.
+
+
+  * The registration data. After loading tthe data file with fread(), this is filtered for the place of registration "Adelshofen". To prevent any problems with capitalisation, all the entries in the relevant column "Gemeinden" are converted to capital letters (which they should already be in anyway).
+```{r}
+reg_data <- fread(file.path("Data","Zulassungen","Zulassungen_alle_Fahrzeuge.csv"), header=TRUE, drop=1) %>%
+  mutate(Gemeinden = str_to_upper(Gemeinden))
+
+reg_data_filtered <- reg_data %>%
+  filter(str_detect(Gemeinden,"ADELSHOFEN"))
+```
+
+These tables are now joined into one along the vehicle IDs.
+```{r}
+reg_veh_comp_part <- reg_data_filtered %>%
+  inner_join(vehicle_component_filtered, by=c(IDNummer="ID_Fahrzeug"))
+```
+
+## Finding the number of vehicles with part 16 registered in Adelshofen
+
+The complete table has `r nrow(reg_veh_comp_part)` entries, so `r nrow(reg_veh_comp_part)` vehicles using part 16 were registered in Adelshofen.
+
+There is one caveat. Two municipalities in Germany are named "Adelshofen". The larger one, Adelshofen in county Fürstenfeldbruck near Munich, is called "ADELSHOFEN" in the registration data, while the smaller one, Adelshofen in county Ansbach near Rothenburg ob der Tauber, is included as "ADELSHOFEN1". If we group the table reg_veh_comp_part by the column "Gemeinden", we can see how many of the vehicles were registered in each of the two towns.
+```{r}
+knitr::kable(reg_veh_comp_part %>% group_by(Gemeinden) %>% count())
+```
+We can see that in each of the two towns called "Adelshofen", `r reg_veh_comp_part %>% filter(Gemeinden=="ADELSHOFEN") %>% count()` vehicles with part 16 were registered.
+
+
+
 # Task 4
 ## Assignment
 Which data types do the attributes of the registration table “Zulassungen_aller_Fahrzeuge”
@@ -142,6 +212,6 @@ What is an easy way to make your application available to your customers?
 Please name 4 aspects.
 
 ## Making the application available to the public
-Storing the data on a local PC means the PC would have to function as a server, otherwise it cannot make the data available to other users.  While software for this purpose is readily available, this would require the PC to be permanently running and online.  Depending on the access count, a PC might also be underpowered to serve a large number connections without disturbing the normal work of the user. There are also security risks involved, because a malicious user could gain access to other, confidential and/or personal data stored on the PC.
+Storing the data on a local PC means the PC would have to function as a server, otherwise it cannot make the data available to other users.  While software for this purpose is readily available, this would require the PC to be permanently running and online.  Depending on the access count, a PC might also be underpowered to serve a large number of connections without disturbing the normal work of the owner. There are also security risks involved, because a malicious user could gain access to other, confidential and/or personal data stored on the PC.
 
 For this reason, the application should be made accessible via a dedicated server. A possible, straightforward way of doing this would be to build the application in an RMarkdown document and make the resulting HTML page available through a web server. Hosting the application on a web server could help to prevent users from gaining direct access to the precise data on the logistics chain, which is likely a trade secret.
