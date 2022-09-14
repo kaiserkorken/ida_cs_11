@@ -261,7 +261,6 @@ load_metadata_teil <- function(ID_Teil) {
     
   }
   
-  # select columns and change ID_Teil to "ID_Einzelteil" for combining
   teil_meta<-teil_meta %>% 
     select(ID_Teil,"Werksnummer")
   names(teil_meta)<-gsub(ID_Teil,"ID_Einzelteil",names(teil_meta))
@@ -270,4 +269,74 @@ load_metadata_teil <- function(ID_Teil) {
   print(names(teil_meta))
   
   return(teil_meta)
+}
+
+##########################
+### SHINY APP functions###
+##########################
+library(sp)
+library(maptools)
+
+points_to_line <- function(data, long, lat, id_field = NULL, sort_field = NULL) {
+  
+  # Convert to SpatialPointsDataFrame
+  coordinates(data) <- c(long, lat)
+  
+  # If there is a sort field...
+  if (!is.null(sort_field)) {
+    if (!is.null(id_field)) {
+      data <- data[order(data[[id_field]], data[[sort_field]]), ]
+    } else {
+      data <- data[order(data[[sort_field]]), ]
+    }
+  }
+  
+  # If there is only one path...
+  if (is.null(id_field)) {
+    
+    lines <- SpatialLines(list(Lines(list(Line(data)), "id")))
+    
+    return(lines)
+    
+    # Now, if we have multiple lines...
+  } else if (!is.null(id_field)) {  
+    
+    # Split into a list by ID field
+    paths <- sp::split(data, data[[id_field]])
+    
+    sp_lines <- SpatialLines(list(Lines(list(Line(paths[[1]])), "line1")))
+    
+    # I like for loops, what can I say...
+    for (p in 2:length(paths)) {
+      id <- paste0("line", as.character(p))
+      l <- SpatialLines(list(Lines(list(Line(paths[[p]])), id)))
+      sp_lines <- spRbind(sp_lines, l)
+    }
+    
+    return(sp_lines)
+  }
+}
+
+getFilterLines <- function(df,ger_map){
+  color<-c("red","yellow","blue","green","orange", "darkslateblue","bisque","skyblue")
+  for (i in 1:nrow(df)){
+    a<- df[i,]%>%
+      select(contains("Breitengrad"))%>%
+      t()
+    b<-df[i,]%>%
+      select(contains("Längengrad"))%>%
+      t()
+    df2<-data.frame("Breitengrad"= a, "Längengrad"= b)
+    rownames(df2) <- NULL
+    colnames(df2)<- c("Breitengrad","Längengrad")
+    
+    filtLine<-points_to_line(df2, 
+                             long="Längengrad",
+                             lat = "Breitengrad"
+                             
+    )
+    ger_map <- ger_map + tm_shape(filtLine)  + tm_lines(col = color[i], scale = 2, lty=1+i)
+    
+  }
+  return(ger_map) 
 }
