@@ -1,0 +1,147 @@
+---
+title: "General Tasks"
+author: "Group 11"
+output: 
+  html_document:
+    toc: TRUE
+---
+
+
+Loading libraries for data import, analysis, plotting, distribution fitting
+
+```{r, message=FALSE}
+
+library(dplyr)
+library(data.table)
+library(plotly)
+library(MASS)
+```
+
+# Task 1
+## Assignment
+
+Logistics plays a more and more important role in the product development of the automobile industry. 
+Parts produced by the supplier must ﬁrst be delivered to the OEM before they can be installed. 
+What seems logical at ﬁrst sight should be analyzed in more detailed way for a professional application.
+Therefore, create a distribution for the logistics delay of component „K7”. 
+Use the production date (“Produktionsdatum”) from the data set “Komponente_K7.csv” and the receiving date of incoming goods (“Wareneingang”) from “Logistikverzug_K7.csv” (logistics delay). 
+You can assume that produced goods are issued one day after production date. 
+For the model design in R, create a new data set “Logistics delay” that contains the required information from both data sets.
+
+1. How is the logistics delay distributed? Justify your choice with statistical tests and brieﬂy describe your approach.
+2. Determine the mean of the logistics delay (watch out for weekends). Please interpret this number and discuss possible alternatives.
+3. Visualize the distribution in an appropriate way by displaying the histogram and the density function using “plotly”. Please describe how you selected the size of the bins.
+4. Please describe how you proceed, if you have to create a decision tree, which is describing the classiﬁcation problem to classify whether the component (K7) is defective (Fehlerhaft) or not? (Hint: You might want to work with visualizations.)
+
+## Preparation of analysis
+
+Importing the data files. Komponente_K7.csv contains the production dates of the components,
+while Logistikverzug_K7.csv contains the date of arrival for the next production stage. The first column of both files is dropped since it contains only line numbers.
+
+```{r}
+production <- fread(file.path("Data","Logistikverzug","Komponente_K7.csv"), header=TRUE, drop=1)
+arrival <- fread(file.path("Data","Logistikverzug","Logistikverzug_K7.csv"), header=TRUE, drop=1)
+
+logistics <- production %>%
+	inner_join(arrival,by="IDNummer",suffix=c(".Komponente",".OEM"))
+
+```
+
+Since part manufacturer, OEM and logistics provider work seven days a week, weekends are of no importance to the logistic delay. Therefore, it can be calculated as simply the number of days between production and arrival at OEM (reduced by one, since the component is dispatched on the day after production).
+```{r}
+logistics <- logistics %>% 
+	mutate(logistic_delay = as.numeric(Wareneingang) - as.numeric(Produktionsdatum))
+
+mean_delay <- mean(logistics$logistic_delay)
+```
+The (arithmetic) mean logistic delay is calculated to be `r mean_delay`. On average, the components will be on the road for one week.
+As an alternative, the median will be computed to make the analysis less susceptible to outliers with an unusually long logistic delay like the ones caused by the delivery problems during the COVID-19 pandemic. This is especially problematic because outliers to the right cannot be compensated by outliers to the left, since there can be no negative logistic delay (provided there are no significant breakthroughs in time travel research).
+```{r}
+median(logistics$logistic_delay)
+```
+
+## Analysis
+
+The logistic delay is assumed to be either normally or logarithmic normally distributed. Both distributions are fitted to the data with the fitdistr function from the MASS library.
+
+```{r}
+lognorm_fit <- fitdistr(logistics$logistic_delay, densfun="lognormal")
+norm_fit <- fitdistr(logistics$logistic_delay, densfun="normal")
+```
+
+The data is plotted as a histogram and as a line plot of the density function, together with the density functions of the normal and log normal distribution.
+
+Since the data only has an accuracy of one day, the automatically selected bins with a size of 1 day are sufficient. This leads to an acceptable number of 12 bins.
+```{r, message=FALSE, warning=FALSE}
+density <- logistics %>% group_by(logistic_delay) %>% count()
+fig <- plot_ly(x = ~logistics$logistic_delay, 
+               type="histogram", 
+               histnorm='probability density', 
+               name="Original data") %>% 
+  add_lines(x = ~density$logistic_delay, 
+            y=~density$n/nrow(logistics),
+            name="Density function",
+            line=list(width=5)) %>%
+  add_lines(x=seq(4,12,0.1), 
+            y=dlnorm(seq(4,12,0.1), meanlog = lognorm_fit$estimate["meanlog"], sdlog =lognorm_fit$estimate["sdlog"]),
+            name="Log normal distribution") %>%
+  add_lines(x=seq(4,12,0.1), 
+            y=dnorm(seq(4,12,0.1), mean = norm_fit$estimate["mean"], sd =norm_fit$estimate["sd"]),
+            name="Normal distribution") %>%
+  layout(xaxis = list(dtick = 1, title="Logistic delay (in days)"),
+         yaxis = list(range=c(0,0.5), title="Relative frequency"))
+
+fig
+```
+
+Both the normal and log normal distributions describe the data reasonably well and their plots follow the original density function plot closely. The plot does not allow a decision as to which distribution is the better fit. The results become much clearer, however, when examining the parameters of the fits.
+```{r}
+lognorm_fit
+norm_fit
+```
+The second line respectively shows the standard errors of the fits. Here it becomes apparent that the errors for the logarithmic normal distribution are nearly one order of magnitude smaller, signifying a more precise fit.
+
+
+
+# Task 2
+## Assignment
+Why does it make sense to store the available data in separate ﬁles instead of saving everything in a huge table? 
+Name at least four beneﬁts. 
+The available tables represent a typical data base structure. How is it called?
+
+## Benefits of seperate data files
+  * Analyses which do not require all the data can selectively load data and save on loading time and RAM space.
+  * Seperate files allow saving each bit of information exactly one time, while in a huge table much of the information on vehicles and comonents would have to be stored multiple times. This has several benefits:
+    * Reducing the overall size of the dataset (although this is offset by the requirement to store several ID columns)
+    * Avoiding errors when updating data
+  * Data providers can be allowed selective access to the respective files, keeping permissions restrictive.
+  
+
+
+# Task 4
+## Assignment
+Which data types do the attributes of the registration table “Zulassungen_aller_Fahrzeuge”
+have? Put your answers into a table which is integrated into your Markdown document and
+describe the characteristics of the data type(s).
+
+## Data types of Zulassungen_aller_Fahrzeuge.csv
+| Column name | Data type | Explanation |
+| ------------|-----------|-------------|
+|**[No Name]**| character | This column contains a unique ID for each. It is essentially a line number, but in text form. |
+|**IDNummer** | character | The vehicle ID, as used in the files in Data/Fahrzeuge |
+|**Gemeinden**| character | The name of the municipality where the vehicle is registered |
+|**Zulassung**| Date      | The date when the vehicle was registered |
+
+
+
+# Task 5
+## Assignment
+You want to publish your application. Why does it make sense to store the records on the database of a server?
+Why can’t you store the records on your personal computer?
+What is an easy way to make your application available to your customers? 
+Please name 4 aspects.
+
+## Making the application available to the public
+Storing the data on a local PC means the PC would have to function as a server, otherwise it cannot make the data available to other users.  While software for this purpose is readily available, this would require the PC to be permanently running and online.  Depending on the access count, a PC might also be underpowered to serve a large number connections without disturbing the normal work of the user. There are also security risks involved, because a malicious user could gain access to other, confidential and/or personal data stored on the PC.
+
+For this reason, the application should be made accessible via a dedicated server. A possible, straightforward way of doing this would be to build the application in an RMarkdown document and make the resulting HTML page available through a web server. Hosting the application on a web server could help to prevent users from gaining direct access to the precise data on the logistics chain, which is likely a trade secret.
