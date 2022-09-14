@@ -6,7 +6,6 @@ output:
     toc: TRUE
 ---
 
-
 Loading libraries for data import, analysis, plotting, distribution fitting, string matching, pretty printing data frames and tables
 
 ```{r, message=FALSE}
@@ -215,3 +214,26 @@ Please name 4 aspects.
 Storing the data on a local PC means the PC would have to function as a server, otherwise it cannot make the data available to other users.  While software for this purpose is readily available, this would require the PC to be permanently running and online.  Depending on the access count, a PC might also be underpowered to serve a large number of connections without disturbing the normal work of the owner. There are also security risks involved, because a malicious user could gain access to other, confidential and/or personal data stored on the PC.
 
 For this reason, the application should be made accessible via a dedicated server. A possible, straightforward way of doing this would be to build the application in an RMarkdown document and make the resulting HTML page available through a web server. Hosting the application on a web server could help to prevent users from gaining direct access to the precise data on the logistics chain, which is likely a trade secret.
+
+
+
+# Task 6
+## Assignment
+On 11.08.2010 there was a hit and run accident. There is no trace of the license plate of the car involved in the accident. 
+The police asks for your help, as you work for the Federal Motor Transport Authority, and asks where the vehicle with the body part number “K5-112-1122-79” was registered.
+
+## Identifying a vehicle by its body part number
+It is assumed the police request is for the purpose of criminal prosecution and therefore legal under § 98c StPO.
+
+The relevant data files have already been imported for task 3.
+First, the column "ID_Karosserie" (which contains body part numbers) of table vehicle_component, linking vehicles to their components, is filtered for the given body part number, to find the corresponding vehicle ID.
+```{r}
+accident_vehicle_components <- vehicle_component %>%
+  filter(ID_Karosserie == "K5-112-1122-79")
+```
+The vehicle in the accident was the one with the ID `r accident_vehicle_components$ID_Fahrzeug`. To find it's place of registration, the registration data in reg_data is now filtered for this ID.
+```{r}
+accident_vehicle_registration <- reg_data %>%
+  filter(IDNummer == accident_vehicle_components$ID_Fahrzeug)
+```
+The vehicle involved in the accident was registered on `r format.Date(accident_vehicle_registration$Zulassung, "%d %b %Y")` in `r accident_vehicle_registration$Gemeinden`.
