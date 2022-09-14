@@ -71,9 +71,7 @@ komp_zu_teile <- lapply(list_komp, load_komp_zu_teile) %>%
 # from the Einzelteil IDs, create a list of all part types included
 
 
-list_teil <- unique(komp_zu_teile$Typ_Einzelteil)
-print(list_teil)
-
+list_teil <- str_match(unique(komp_zu_teile$Typ_Einzelteil), "(ID_T[:digit:]+)")[,1]
 
 
 ############################
@@ -84,7 +82,7 @@ print(list_teil)
 
 teil_meta <- lapply(list_teil, load_metadata_teil) %>%
   rbindlist()
-komp_zu_teile<-inner_join(komp_zu_teile, teil_meta,by="ID_Einzelteil", suffix=c("_Komponente","_Einzelteil"))
+komp_zu_teile_werk<-inner_join(komp_zu_teile, teil_meta,by="ID_Einzelteil", suffix=c("_Komponente","_Einzelteil"))
 
 
 ############################
@@ -95,9 +93,16 @@ komp_zu_teile<-inner_join(komp_zu_teile, teil_meta,by="ID_Einzelteil", suffix=c(
 geodata <- lapply(dir(file.path("Data","Geodaten"), pattern="Werke", full.names=TRUE), fread, select=1:5, keepLeadingZeros=FALSE) %>%
 	rbindlist() %>%
 	mutate(Werk = as.numeric(gsub("O","",Werk))) %>%
+	rename(Längengrad = 5)%>%
   na.omit()%>%
-	rename(Längengrad = 5)
-	
+  select(-contains(c("PLZ")))
+
+zulassung<- read_csv2("Data/Zulassungen/Zulassungen_alle_Fahrzeuge.csv")%>%
+  select(-contains("...1"))
+gemeinde_geo <- read_csv2("Data/Geodaten/Geodaten_Gemeinden_v1.2_2017-08-22_TrR.csv")
+names(gemeinde_geo)<-  gsub("Laengengrad","Längengrad",names(gemeinde_geo))
+
+geo_state_city <- read_csv("Additional_files/Gemeinde_Bund_HS_Geo.csv")
 
 
 #############################
@@ -117,21 +122,22 @@ regdata <- fread(file.path("Data","Zulassungen","Zulassungen_alle_Fahrzeuge.csv"
 # join Fahrzeug->Komponente and Komponente->Einzelteil table
 names(fz_zu_komp)<-gsub("Werksnummer","Werksnummer_Fahrzeug",names(fz_zu_komp))
 fz_komp_teile <- fz_zu_komp %>%
-	inner_join(komp_zu_teile,by="ID_Komponente")
+	inner_join(komp_zu_teile_werk,by="ID_Komponente")
 fz_komp_teile$Werksnummer_Einzelteil<-as.double(fz_komp_teile$Werksnummer_Einzelteil)
+fz_komp_teile_zul <- fz_komp_teile %>%
+  inner_join(zulassung,by=c("ID_Fahrzeug" = "IDNummer"))#%>%
 
 
-summary(fz_komp_teile)
+summary(fz_komp_teile_zul)
 
 # join geodata (for vehicles and component manufacturer
-fz_komp_teile_geo <- fz_komp_teile %>%
+fz_komp_teile_geo <- fz_komp_teile_zul %>%
 	inner_join(geodata, by=c(Werksnummer_Fahrzeug="Werk")) %>%
-	inner_join(geodata, by=c(Werksnummer_Komponente="Werk"), suffix=c("","_Komponente"))%>%
-  inner_join(geodata, by=c(Werksnummer_Einzelteil="Werk"),suffix=c("_Fahrzeug","_Einzelteil"))
+	inner_join(geodata, by=c(Werksnummer_Komponente="Werk"), suffix=c("", "_Komponente"))%>%
+  inner_join(geodata, by=c(Werksnummer_Einzelteil="Werk"), suffix=c("", "_Einzelteil"))%>%
+  inner_join(gemeinde_geo, by=c("Gemeinden" = "Gemeinde"), suffix=c("_Fahrzeug",""))%>%
+  inner_join(geo_state_city, by=c("Gemeinden"="Gemeinde"), suffix=c("_Gemeinde","_Hauptstadt"))
 
-# join registration data
-fz_komp_teile_geo <- fz_komp_teile_geo %>%
-  left_join(regdata,by=c(ID_Fahrzeug="IDNummer"))
 
 
 # calculate distances of material flow
@@ -147,10 +153,11 @@ calc_distance_in_m <- function(longA_vec, latA_vec, longB_vec, latB_vec) {
   mapply(distance_in_m, longA_vec, latA_vec, longB_vec, latB_vec)
 }
 
-fz_komp_teile_geo <- fz_komp_teile_geo %>%
+fz_komp_teile_geo_dist <- fz_komp_teile_geo %>%
   mutate(Distanz_Einzelteil_zu_Komponente_in_m = calc_distance_in_m(Längengrad_Einzelteil, Breitengrad_Einzelteil, Längengrad_Komponente, Breitengrad_Komponente)) %>%
-  mutate(Distanz_Komponente_zu_Fahrzeug_in_m = calc_distance_in_m(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) #%>%
-
+  mutate(Distanz_Komponente_zu_Fahrzeug_in_m = calc_distance_in_m(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) %>%
+  mutate(Distanz_Fahrzeug_zu_Hauptstadt_in_m = calc_distance_in_m( Längengrad_Fahrzeug, Breitengrad_Fahrzeug, Längengrad_Hauptstadt, Breitengrad_Hauptstadt))%>%
+  mutate(Distanz_Hauptstadt_zu_Gemeinde_in_m = calc_distance_in_m( Längengrad_Hauptstadt, Breitengrad_Hauptstadt, Längengrad_Gemeinde, Breitengrad_Gemeinde ))
 summary(fz_komp_teile_geo)
 
-fwrite(fz_komp_teile_geo, file="Final_Data_Group_11.csv")
+write.csv(fz_komp_teile_geo_dist,paste0(getwd(),"/Final_dataset_group_11.csv"), row.names = FALSE)
