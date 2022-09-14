@@ -276,7 +276,7 @@ load_metadata_teil <- function(ID_Teil) {
 ##########################
 library(sp)
 library(maptools)
-
+# function from Rpubs
 points_to_line <- function(data, long, lat, id_field = NULL, sort_field = NULL) {
   
   # Convert to SpatialPointsDataFrame
@@ -317,8 +317,13 @@ points_to_line <- function(data, long, lat, id_field = NULL, sort_field = NULL) 
   }
 }
 
+# Function to built connection lines between points
+# Args: df-> data of coordinates; ger_map -> Map 
+# Return: ger_map
 getFilterLines <- function(df,ger_map){
+  #built color array; visible colors
   color<-c("red","yellow","blue","green","orange", "darkslateblue","bisque","skyblue")
+  #built connection df-> df2 to get the route
   for (i in 1:nrow(df)){
     a<- df[i,]%>%
       select(contains("Breitengrad"))%>%
@@ -329,12 +334,13 @@ getFilterLines <- function(df,ger_map){
     df2<-data.frame("Breitengrad"= a, "Längengrad"= b)
     rownames(df2) <- NULL
     colnames(df2)<- c("Breitengrad","Längengrad")
-    
+    # built route
     filtLine<-points_to_line(df2, 
                              long="Längengrad",
                              lat = "Breitengrad"
                              
     )
+    #add route to map
     ger_map <- ger_map + tm_shape(filtLine)  + tm_lines(col = color[i], scale = 2, lty=1+i)
     
   }
