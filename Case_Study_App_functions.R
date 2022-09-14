@@ -1,9 +1,9 @@
 library(data.table)
 library(dplyr)
 
-##########################
-# FAHRZEUGE -> KOMPONENTEN
-##########################
+############################
+# KOMPONENTEN -> EINZELTEILE
+############################
 
 #read a Komponente->Einzelteil file and sanitise the data
 load_komp_zu_teile <- function(ID_Komp) {
@@ -25,7 +25,8 @@ load_komp_zu_teile <- function(ID_Komp) {
   frame <- frame %>% 
     reshape(varying=teile, v.names = "ID_Einzelteil", direction="long",times=teile) %>%
     select(ID_Komponente=paste("ID_",ID_Komp,sep=""), ID_Einzelteil,time) %>%
-    rename(Typ_Einzelteil=time)
+    rename(Typ_Einzelteil=time) %>%
+    mutate(Typ_Einzelteil=str_replace(Typ_Einzelteil,"ID_T",""))
   
   return(frame)
 }
@@ -124,11 +125,9 @@ combine_columns<-function(df_xy){
 #       ID_Teil = "ID_T<X>
 # Return:
 #       teil_meta = [files converted to data frame with needed columns]
-load_metadata_teil <- function(ID_Teil) {
+load_metadata_teil <- function(ID_Teil_num) {
   column_of_interest<-c("ID","Werksnummer","Produktionsdatum")
 
-  # change string to needed form
-  ID_Teil_num<- str_replace_all(ID_Teil,"ID_T","") 
   
   if(strtoi(ID_Teil_num) > 10){
     ID_Teil_num<-paste0("T",ID_Teil_num)
@@ -149,7 +148,7 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))%>%
       combine_columns()
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T02") {
@@ -161,7 +160,7 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))%>%
       combine_columns()
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01") 
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01") 
   }
   
   if(ID_Teil_num == "T03") {
@@ -187,7 +186,7 @@ load_metadata_teil <- function(ID_Teil) {
     #names(teil_meta)<-gsub(".x","",names(teil_meta))
 
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T06") {
@@ -214,7 +213,7 @@ load_metadata_teil <- function(ID_Teil) {
      teil_meta <- combine_columns(teil_meta)
     
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T23") {
@@ -224,7 +223,7 @@ load_metadata_teil <- function(ID_Teil) {
       combine_columns()
 
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T24") {
@@ -236,7 +235,7 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))%>%
       combine_columns()
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T25") {
@@ -250,6 +249,8 @@ load_metadata_teil <- function(ID_Teil) {
   teil_meta<-teil_meta %>% 
     select(ID_Teil,"Werksnummer")
   names(teil_meta)<-gsub(ID_Teil,"ID_Einzelteil",names(teil_meta))
+  
+  print(str(komp_zu_teile))
   
   # reduce size of df by semi_join with komp_zu_teile by "ID_Einzelteil" 
   teil_meta<- semi_join(data.frame(teil_meta), komp_zu_teile, by = "ID_Einzelteil")
