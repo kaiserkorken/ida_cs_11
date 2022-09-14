@@ -70,6 +70,8 @@ library(rgdal)
 library(dplyr)
 library(DT)
 library(reshape2)
+library(hrbrthemes)
+library(viridis)
 
 #### UI #####
 
@@ -262,19 +264,8 @@ server <- function(input, output) {
   ## boxplot
 
   output$boxPlot <- renderPlot({
-    
-    mtcars_by_cyl <- mtcars %>%
-                        dplyr::select(cyl, hp) %>%
-                        group_by(cyl) #%>%
-                        #summarize(total_hp = sum(hp))
-    
-    dist_vs_type <- mtcars_by_cyl
-    colnames(dist_vs_type) = c("type", "total_dist")
-#    dist_vs_type[dist_vs_type == 4] = "Single Part to component value"
-#    dist_vs_type[dist_vs_type == 5] = "Component to OEM"
-#    dist_vs_type[dist_vs_type == 6] = "OEM to distribution center"
-  
-#    If you have already made numeric vectors called "a", "b", and "c"
+
+    # demo vectors
     single_to_component <- 1:10
     component_to_oem <- sqrt(1:200)
     oem_to_distribution <- log2(1:500)
@@ -291,20 +282,20 @@ server <- function(input, output) {
     colnames(data_to_plot) = c("total_dist","type")
     
     #print(levels_selected)
-    print(head(data_to_plot))
+    #print(head(data_to_plot))
     
-    ggplot(data_to_plot, aes(x=type,y=total_dist)) + 
+    ggplot(data_to_plot, aes(x=type,y=total_dist, fill=type)) + 
       geom_boxplot() +
       scale_fill_viridis(discrete = TRUE, alpha=0.6) +
       geom_jitter(color="black", size=0.4, alpha=0.9) +
       theme_ipsum() +
       theme(
         legend.position="none",
-        plot.title = element_text(size=11)
+        plot.title = element_text(size=20)
       ) +
       ggtitle("Total distance travelled by type of material flow") +
       xlab("") +
-      ylab("Distance")
+      ylab("Distance in meters")
       
       
   })
