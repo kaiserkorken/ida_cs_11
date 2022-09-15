@@ -360,15 +360,9 @@ server <- function(input, output) {
       ) +
       ggtitle("Total distance travelled by type of material flow") +
       xlab("") +
-<<<<<<< HEAD
+
       ylab("Distance in meters")
-      
-      
-=======
-      ylab("Distance")
-    
-    
->>>>>>> d05d185a83a8568340c703352403317ef32d5531
+
   })
   
   
