@@ -37,16 +37,22 @@ For the model design in R, create a new data set “Logistics delay” that cont
 ## Preparation of analysis
 
 Importing the data files. Komponente_K7.csv contains the production dates of the components,
-while Logistikverzug_K7.csv contains the date of arrival for the next production stage. The first column of both files is dropped since it contains only line numbers.
+while Logistikverzug_K7.csv contains the date of arrival for the next production stage. The first column of both files is dropped since it contains only line numbers. Information about defects is included as integers with the values 0 (false) or 1 (true). fread() interprets this as an integer, so it is converted to a logical value (TRUE or FALSE).
 
 ```{r}
-production <- fread(file.path("Data","Logistikverzug","Komponente_K7.csv"), header=TRUE, drop=1)
-arrival <- fread(file.path("Data","Logistikverzug","Logistikverzug_K7.csv"), header=TRUE, drop=1)
+production <- fread(file.path("Data","Logistikverzug","Komponente_K7.csv"), header=TRUE, drop=1) %>%
+  mutate(Fehlerhaft = as.logical(Fehlerhaft))
+arrival <- fread(file.path("Data","Logistikverzug","Logistikverzug_K7.csv"), header=TRUE, drop=1) %>%
+  mutate(Fehlerhaft = as.logical(Fehlerhaft))
+```
 
+The two tables with the data imported from the files are now joined into one along the vehicle ID ("IDNummer").
+```{r}
 logistics <- production %>%
-	inner_join(arrival,by="IDNummer",suffix=c(".Komponente",".OEM"))
+	inner_join(arrival,by=c("IDNummer","Werksnummer","Herstellernummer"),suffix=c(".Komponente",".OEM"))
 
 ```
+
 
 Since part manufacturer, OEM and logistics provider work seven days a week, weekends are of no importance to the logistic delay. Therefore, it can be calculated as simply the number of days between production and arrival at OEM (reduced by one, since the component is dispatched on the day after production).
 ```{r}
@@ -58,8 +64,9 @@ mean_delay <- mean(logistics$logistic_delay)
 The (arithmetic) mean logistic delay is calculated to be `r mean_delay`. On average, the components will be on the road for one week.
 As an alternative, the median will be computed to make the analysis less susceptible to outliers with an unusually long logistic delay like the ones caused by the delivery problems during the COVID-19 pandemic. This is especially problematic because outliers to the right cannot be compensated by outliers to the left, since there can be no negative logistic delay (provided there are no significant breakthroughs in time travel research).
 ```{r}
-median(logistics$logistic_delay)
+median_delay <- median(logistics$logistic_delay)
 ```
+The median logistic delay is `r median_delay`.
 
 ## Analysis
 
@@ -109,6 +116,26 @@ norm_fit
 ```
 The second line respectively shows the standard errors of the fits. Here it becomes apparent that the errors for the logarithmic normal distribution are nearly one order of magnitude smaller, signifying a more precise fit.
 
+## Deciding if a component is defective
+The provided data includes two columns to indicate if a component is defective, one for the component manufacturer side and one for the OEM side. Since they are both originally called "Fehlerhaft", they are named "Fehlerhaft.Komponente" and Fehlerhaft.OEM" in the joined dataset.
+
+If both of these columns agree, the decision is easy. However, there could be cases where the classification on the component manufacturer and the OEM side disagree. To find out if these cases exist, the logistics table is grouped by the two columns and then counted. This displays all present combinations of defect classifications and how often these combinations occur.
+```{r}
+knitr::kable(logistics %>% 
+               group_by(Fehlerhaft.Komponente,Fehlerhaft.OEM) %>% 
+               count()
+             )
+```
+
+As we can see, most components were classified as "not defective" (FALSE) by the component manufacturer and the OEM.
+The `r logistics %>% filter(Fehlerhaft.Komponente==TRUE) %>% count()` components that were classified as defective on the component manufacturer side were not classified as defective by the OEM. There are several possible explanations for this:
+
+1. The defects disappeared during transport. This is unlikely.
+2. The quality control (QC) on the component manufacturer side is stricter than on the OEM side. The manufacturer noticed a defect, but delivered the component anyway, probably hoping the OEM QC would not notice it, which it indeed did not.
+
+Since none of the sides can be completely trusted (the manufacturer might cheat and the OEM might be less familiar with the details of what exactly can be defective in a component), the part should be considered defective if either of the sides finds a defect. The resulting decision tree looks like this:
+
+![consider defective if either Fehlerhaft.Komponente or Fehlerhaft.OEM are TRUE](Additional_files/General_Task_1.4.png)
 
 
 # Task 2
@@ -205,7 +232,7 @@ Please name 4 aspects.
 ## Making the application available to the public
 Storing the data on a local PC means the PC would have to function as a server, otherwise it cannot make the data available to other users.  While software for this purpose is readily available, this would require the PC to be permanently running and online.  Depending on the access count, a PC might also be underpowered to serve a large number of connections without disturbing the normal work of the owner. There are also security risks involved, because a malicious user could gain access to other, confidential and/or personal data stored on the PC.
 
-For this reason, the application should be made accessible via a dedicated server. A possible, straightforward way of doing this would be to build the application in an RMarkdown document and make the resulting HTML page available through a web server. Hosting the application on a web server could help to prevent users from gaining direct access to the precise data on the logistics chain, which is likely a trade secret.
+For this reason, the application should be made accessible via a dedicated server. The shiny app framework is already based on HTML, so it can easily be made accessible to the public as a website. Hosting the application on a web server would help to prevent users from gaining direct access to the precise data on the logistics chain, which is likely a trade secret, since the file Final_Data_Group_11.csv is only available to the server software, but not accessible to the client.
 
 
 
