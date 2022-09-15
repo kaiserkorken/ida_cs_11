@@ -181,7 +181,7 @@ ui <- dashboardPage(
 
 ## data aggregation
 
-final_data <- read_csv("Final_dataset_group_11.csv")
+final_data <- read_csv("Final_Data_Group_11.csv")
 
 server <- function(input, output) {
   
