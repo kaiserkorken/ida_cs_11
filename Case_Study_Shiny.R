@@ -269,7 +269,7 @@ server <- function(input, output) {
     single_to_component <- 1:10
     component_to_oem <- sqrt(1:200)
     oem_to_distribution <- log2(1:500)
-#    type_shortcut <- c("single_to_component","component_to_oem","oem_to_distribution")
+    type_shortcut <- c("single_to_component","component_to_oem","oem_to_distribution")
 
     dist_vs_type <- lapply(type_shortcut, get, envir=environment())
     names(dist_vs_type) <- c("Single Part to Component", "Component to OEM", "OEM to Distribution center")
