@@ -111,10 +111,10 @@ body <- dashboardBody(
                 ),
                 checkboxGroupInput("checkGroupLevelsMap", 
                                    h3("Level:"), 
-                                   choices = list("Single Part to component value" = 1, 
-                                                  "Component to OEM" = 2, 
-                                                  "OEM to distribution center" = 3,
-                                                  "OEM to state capital" = 4),
+                                   choices = list("1: Single Part to component value" = 1, 
+                                                  "2: Component to OEM" = 2, 
+                                                  "3: OEM to distribution center" = 3,
+                                                  "4: OEM to state capital" = 4),
                                    selected = c(1,2,3,4)
                 ),
                 radioButtons("radio", 
@@ -142,10 +142,10 @@ body <- dashboardBody(
                 
                 checkboxGroupInput("checkGroupLevelsBoxplot", 
                                    h3("Level:"), 
-                                   choices = list("Single Part to component value" = 1, 
-                                                  "Component to OEM" = 2,
-                                                  "OEM to state capital" = 3,
-                                                  "State capital to distribution center" = 4),
+                                   choices = list("1: Single Part to component value" = 1, 
+                                                  "2: Component to OEM" = 2,
+                                                  "3: OEM to distribution center" = 3,
+                                                  "4: OEM to state capital" = 4),
                                    selected = c(1,2,3,4)
                 ),
               ),
@@ -182,13 +182,54 @@ ui <- dashboardPage(
 
 #### SERVER FUNCTION #####
 
-## data aggregation
+### data aggregation 
+# runs once when starting
 
 final_data <- read_csv("Final_Data_Group_11.csv")
 
+## material flow on different levels
+
+samples <- function(df) {
+  df[sample(nrow(df), 10000), ]
+}
+
+distance_single_to_component <- final_data %>%
+  select("ID_Einzelteil","Distanz_Einzelteil_zu_Komponente_in_m") %>%
+  unique() %>%
+  select("Distanz_Einzelteil_zu_Komponente_in_m") %>%
+  samples()
+
+distance_component_to_OEM <- final_data %>%
+  select("ID_Komponente","Distanz_Komponente_zu_Fahrzeug_in_m") %>%
+  unique() %>%
+  select("Distanz_Komponente_zu_Fahrzeug_in_m") %>%
+  samples()
+
+distance_OEM_to_state_capital <- final_data %>%
+  select("ID_Fahrzeug","Distanz_Fahrzeug_zu_Hauptstadt_in_m") %>%
+  unique() %>%
+  select("Distanz_Fahrzeug_zu_Hauptstadt_in_m") %>%
+  samples()
+
+distance_OEM_to_distribution <- final_data %>%
+  select("ID_Fahrzeug","Distanz_Fahrzeug_zu_Hauptstadt_in_m","Distanz_Hauptstadt_zu_Gemeinde_in_m") %>%
+  summarize(ID_Fahrzeug, Distanz_Fahrzeug_zu_Gemeinde_in_m = Distanz_Fahrzeug_zu_Hauptstadt_in_m + Distanz_Hauptstadt_zu_Gemeinde_in_m) %>%
+  select("Distanz_Fahrzeug_zu_Gemeinde_in_m") %>%
+  samples()
+
+# aggregate in single list for plotting
+levels <- c("distance_single_to_component","distance_component_to_OEM","distance_OEM_to_distribution","distance_OEM_to_state_capital")
+dist_vs_type <- lapply(levels, get, envir=environment())
+
+# captions
+captions_list <- c("1: Single Part to Component", "2: Component to OEM", "3: OEM to Distribution center", "4: OEM to State Capital")
+names(dist_vs_type) <- captions_list
+
+
+##
 server <- function(input, output) {
   
-  ## map
+  ### map
   
   # load shapefile for germany
   ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm3.shp")
@@ -330,44 +371,59 @@ server <- function(input, output) {
   
   output$boxPlot <- renderPlot({
 
+    levels_selected <- sort(as.numeric(input$checkGroupLevelsBoxplot))
+    
+    #if (levels_selet)
 
     # demo vectors
-    single_to_component <- 1:10#final_data$Distanz_Einzelteil_zu_Komponente_in_m
-    component_to_oem <- sqrt(1:200)#final_data$Distanz_Komponente_zu_Fahrzeug_in_m
-    oem_to_state_capital <- log2(1:500)#final_data$Distanz_Fahrzeug_zu_Hauptstadt_in_m
-    state_capital_to_distribution <- log2(1:500)#final_data$Distanz_Hauptstadt_zu_Gemeinde_in_m
-    type_shortcut <- c("single_to_component","component_to_oem","oem_to_state_capital","state_capital_to_distribution")
+    #single_to_component <- 1:10#final_data$Distanz_Einzelteil_zu_Komponente_in_m
+    #component_to_oem <- sqrt(1:200)#final_data$Distanz_Komponente_zu_Fahrzeug_in_m
+    #oem_to_state_capital <- log2(1:500)#final_data$Distanz_Fahrzeug_zu_Hauptstadt_in_m
+    #state_capital_to_distribution <- log2(1:500)#final_data$Distanz_Hauptstadt_zu_Gemeinde_in_m
+    # real vectors
 
-    dist_vs_type <- lapply(type_shortcut, get, envir=environment())
-    names(dist_vs_type) <- c("Single Part to Component", "Component to OEM", "OEM to State Capital", "State Capital to Distribution center")
-    #print(head(dist_vs_type))
-    #boxplot(dist_vs_type)
     
-    levels_selected <- as.numeric(input$checkGroupLevelsBoxplot)
-    data_to_plot <- dist_vs_type[levels_selected] %>% # choose data according to selection 
-      melt() #melt into a long vector
-    colnames(data_to_plot) = c("total_dist","type")
+    #columns <- c("Distanz_Einzelteil_zu_Komponente_in_m","Distanz_Komponente_zu_Fahrzeug_in_m","Distanz_Fahrzeug_zu_Hauptstadt_in_m","Distanz_Hauptstadt_zu_Gemeinde_in_m")
+    
+    #data_to_plot <- dist_vs_type[levels_selected] %>% # choose data according to selection 
+      #reshape2::melt() #melt into a long vector
+    #colnames(data_to_plot) = c("total_dist","type")
     
     #print(levels_selected)
     #print(head(data_to_plot))
     
-    ggplot(data_to_plot, aes(x=type,y=total_dist, fill=type)) + 
-      geom_boxplot() +
+    #ggplot(data_to_plot, aes(x=type,y=total_dist, fill=type)) + 
+    
+    #print(columns)
+    #print(levels_selected)
+    #print(columns[levels_selected])
+    #print(head(final_data[columns[levels_selected]]))
+    
+    #final_data[columns[levels_selected]] %>%
+    
+    p <-ggplot()
+    if (1 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[1], y=unlist(dist_vs_type[1])))}
+    if (2 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[2], y=unlist(dist_vs_type[2])))}
+    if (3 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[3], y=unlist(dist_vs_type[3])))}
+    if (4 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[4], y=unlist(dist_vs_type[4])))}
+    p + 
       scale_fill_viridis(discrete = TRUE, alpha=0.6) +
-      geom_jitter(color="black", size=0.4, alpha=0.9) +
+      #geom_jitter(color="black", size=0.4, alpha=0.9) +
       theme_ipsum() +
       theme(
         legend.position="none",
         plot.title = element_text(size=20)
       ) +
-      ggtitle("Total distance travelled by type of material flow") +
+      ggtitle("Overview of distance travelled over the supply chain") +
       xlab("") +
       ylab("Distance in meters")
 
   })
   
   
-  output$dynamicDataSet <- renderDataTable(final_data)#, options = list(pageLength = 5))
+  output$dynamicDataSet <- renderDataTable(final_data,
+    options = list(scrollX = TRUE)
+  )
   
 }
 
