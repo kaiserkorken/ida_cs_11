@@ -66,13 +66,16 @@ library(grid)
 library(tmap)
 library(viridis)
 library(rgdal)
-
+library(tmaptools)
 library(dplyr)
 library(DT)
 library(reshape2)
 library(hrbrthemes)
 library(viridis)
 
+library(tidygeocoder)
+
+source("Case_Study_App_functions.R")
 #### UI #####
 
 sidebar <- dashboardSidebar(
@@ -93,12 +96,11 @@ body <- dashboardBody(
               # Sidebar panel for inputs ----
               sidebarPanel(
                 
-                #textInput("textInputVehicleID", 
-                #          h3("Vehicle ID:"), 
-                #          placeholder  = "Enter ID here"),
+                textInput("textInputVehicleID", 
+                          h3("Vehicle ID:"), 
+                          placeholder  = "Enter ID here"),
                 
-                dataTableOutput("dynamicVehicleID"),
-                
+                #dataTableOutput("dynamicVehicleID"),
                 
                 checkboxGroupInput("checkGroupDistanceComparison", 
                                    h3("Options:"), 
@@ -106,14 +108,15 @@ body <- dashboardBody(
                                                   "Shortest" = 2, 
                                                   "Median" = 3),
                                    #selected = c(1,2,3)
-                                   ),
+                ),
                 checkboxGroupInput("checkGroupLevelsMap", 
                                    h3("Level:"), 
                                    choices = list("Single Part to component value" = 1, 
                                                   "Component to OEM" = 2, 
-                                                  "OEM to distribution center" = 3),
-                                   selected = 1
-                                   ),
+                                                  "OEM to distribution center" = 3,
+                                                  "OEM to state capital" = 4),
+                                   selected = c(1,2,3,4)
+                ),
                 radioButtons("radio", 
                              h3("Vehicle Types:"),
                              choices = list("All" = 1, 
@@ -136,13 +139,14 @@ body <- dashboardBody(
             sidebarLayout(
               # Sidebar panel for inputs ----
               sidebarPanel(
-    
+                
                 checkboxGroupInput("checkGroupLevelsBoxplot", 
                                    h3("Level:"), 
                                    choices = list("Single Part to component value" = 1, 
                                                   "Component to OEM" = 2, 
-                                                  "OEM to distribution center" = 3),
-                                   selected = c(1,2,3)
+                                                  "OEM to distribution center" = 3,
+                                                  "OEM to state capital" = 4),
+                                   selected = c(1,2,3,4)
                 ),
               ),
               
@@ -170,100 +174,161 @@ body <- dashboardBody(
 
 # Define UI for app that draws a histogram ----
 ui <- dashboardPage(
-    dashboardHeader(title = "Case Study 11"),
-    sidebar,
-    body
-  )
+  dashboardHeader(title = "Case Study 11"),
+  sidebar,
+  body
+)
 
 #### SERVER FUNCTION #####
 
 ## data aggregation
 
+final_data <- read_csv("Final_Data_Group_11.csv")
 
 server <- function(input, output) {
   
   ## map
-
+  
   # load shapefile for germany
   ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm3.shp")
   
+  # create Germanys Map for plot and render
+  map_germany <- tm_shape(ger_shp) +
+    tm_borders() +
+    tm_polygons(col = "lightblue1", 
+                alpha = 0.4, 
+                id = "NAME_3",
+                popup.vars = c("Bundesland: "="NAME_1")) +
+    tm_scale_bar(position = c("left", "bottom"), width = 0.15)
+  
+  # Map output
   output$map <- renderTmap({
     
-
-    
+    #initiate
     coord<- data.frame(Breitengrad=NA, Längengrad=NA)%>%
       na.omit()
-
+    single_part_location <- coord
+    component_location <- coord
+    vehicle_location <- coord
+    gemeinde_location <- coord
+    state_capital_location <- coord
+    # get ID from user-input
+    vehicleID <- input$textInputVehicleID 
+    checkB<- input$checkGroupLevelsMap
+    
+    #default filter: set dot to Berlin
+    filtermap <- ger_shp %>%
+      filter(NAME_3 == "Berlin")
+    
+    # switch
+    inti<-0
+    
+    vehicleID<-"11-1-12-600035" # kann gelöscht werden
+    # if Fahrzeug_ID exists in data
+    # get information from data and plot in map
     if (any(final_data$ID_Fahrzeug == vehicleID)) {
-      # TODO: Plot necessary data for search bar usage
-      row_of_content <- final_data[which(final_data$ID_Fahrzeug == input$textInputVehicleID),]
       
-      single_part_location <- coord
-      component_location <- coord
-      vehicle_location <- coord
+      # get information rows from data
+      row_of_content <- final_data[which(final_data$ID_Fahrzeug == vehicleID),]
+      state_capital<-unique(row_of_content$Hauptstadt) # braucht man vllt nciht
       
+      # get location data from all needed locations
       single_part_location <- row_of_content[,c("Breitengrad_Einzelteil", "Längengrad_Einzelteil")]
-      names(single_part_location) <- gsub("_Einzelteil","", names(single_part_location))      
+      names(single_part_location) <- gsub("_Einzelteil","", names(single_part_location))
+      
       component_location <- row_of_content[,c("Breitengrad_Komponente", "Längengrad_Komponente")]
       names(component_location) <- gsub("_Komponente","", names(component_location))
+
       vehicle_location <- row_of_content[,c("Breitengrad_Fahrzeug", "Längengrad_Fahrzeug")]
       names(vehicle_location) <- gsub("_Fahrzeug","", names(vehicle_location))
       
-      print(vehicle_location)
+      state_capital_location <- row_of_content[,c("Breitengrad_Hauptstadt", "Längengrad_Hauptstadt")]
+      names(state_capital_location) <- gsub("_Hauptstadt","", names(state_capital_location))
+        
+      gemeinde_location <- row_of_content[,c("Breitengrad_Gemeinde", "Längengrad_Gemeinde")]
+      names(gemeinde_location) <- gsub("_Gemeinde","", names(gemeinde_location))
+      
+      # built coordinate points of states
       coord<- coord %>% full_join(single_part_location,by = c("Breitengrad", "Längengrad"))%>%
-        full_join(single_part_location,by = c("Breitengrad", "Längengrad"))%>%
-        full_join(vehicle_location,by = c("Breitengrad", "Längengrad"))
-      print(coord)
+        full_join(component_location,by = c("Breitengrad", "Längengrad"))%>%
+        full_join(vehicle_location,by = c("Breitengrad", "Längengrad"))%>%
+        full_join(state_capital_location,by = c("Breitengrad", "Längengrad"))%>%
+        full_join(gemeinde_location,by = c("Breitengrad", "Längengrad"))
+      # set filter for map 
+      coord_sf <- st_as_sf(coord, coords = c("Längengrad","Breitengrad"), crs=4326)
+      filtermap <- coord_sf
+      # switch to 1
+      inti <- 1
     }
-    map_germany <- tm_shape(ger_shp) +
-      tm_borders() +
-      tm_polygons(col = "lightblue1", 
-                  alpha = 0.4, 
-                  id = "NAME_3",
-                  popup.vars = c("Bundesland: "="NAME_1")) +
-      tm_scale_bar(position = c("left", "bottom"), width = 0.15) #+
-      #tm_compass(position = c("left", "top"), size = 2)
+    
+   #default when switch is 0
+   if(!inti){
+     map_germany <- map_germany  +
+       tm_shape(filtermap) + tm_dots(size = 0.000001) 
+   }else if(inti){
+     #built connection lines from route
+     if("1" %in% checkB) {
+       teil_zu_komp <- data.frame(c(single_part_location, component_location))
+       map_germany <- getFilterLines(teil_zu_komp, map_germany)
+     }
+     if("2" %in% checkB ){
+       komp_zu_fahr <- data.frame(c(component_location, vehicle_location))
+       map_germany <- getFilterLines(komp_zu_fahr, map_germany)
+     }
+     if("3" %in% checkB) {
+       fahr_zu_stadt <- data.frame(c(vehicle_location, state_capital_location))
+       map_germany <- getFilterLines(fahr_zu_stadt, map_germany)
+     }
+     if("4" %in% checkB ){
+       stadt_zu_kunde <- data.frame(c(state_capital_location, gemeinde_location))
+       map_germany <- getFilterLines(stadt_zu_kunde, map_germany)
+     }
+   }
+    # print Map
+    map_germany <- map_germany +
+       tm_shape(filtermap) + tm_dots()
   })
   
   ## vehicle plot
   
-  output$vehiclePlot <- renderPlot({
-    if (input$textInputVehicleID > 0) {
-      # TODO: Plot necessary data for search bar usage
-    }
-  })
+  #output$vehiclePlot <- renderPlot({
+  #  if (input$textInputVehicleID > 0) {
+  #    # TODO: Plot necessary data for search bar usage
+  #  }
+  #})
   
   ## vehicle ID table and search
   
-  output$dynamicVehicleID <- renderDataTable(datatable(
-                                             mtcars["mpg"],
-                                             rownames = FALSE,
-                                             colnames = c("Vehicle ID"),
-                                             filter = "none",
-                                             selection="single",
-                                             options = list(scrollY = "200px", 
-                                                            scrollCollapse = TRUE,
-                                                            paging = FALSE,
-                                                            columnDefs = list(list(className = 'dt-left', targets = 0)),
-                                                            
-                                                            #columns.searchable = FALSE,
-                                                            #search = list(FALSE),
-                                                            #select = "single",
-                                                            select.items = "row",
-                                                            columns = list(searchable = FALSE),
-                                                            searching = TRUE,
-                                                            sDom  = '<"top">lfrt<"bottom">ip'
-                                                            )
-                                              )
-                                             )
+  #output$dynamicVehicleID <- renderDataTable(datatable(
+  #  mtcars["mpg"],
+  #  rownames = FALSE,
+  #  colnames = c("Vehicle ID"),
+  #  filter = "none",
+  #  selection="single",
+  #  options = list(scrollY = "200px", 
+  #                 scrollCollapse = TRUE,
+  #                 paging = FALSE,
+  #                 columnDefs = list(list(className = 'dt-left', targets = 0)),
+                   
+                   #columns.searchable = FALSE,
+                   #search = list(FALSE),
+                   #select = "single",
+  #                 select.items = "row",
+  #                 columns = list(searchable = FALSE),
+  #                 searching = TRUE,
+  #                 sDom  = '<"top">lfrt<"bottom">ip'
+  #  )
+  #)
+  #)
   
   
   
   
   
   ## boxplot
-
+  
   output$boxPlot <- renderPlot({
+
 
     # demo vectors
     single_to_component <- 1:10
@@ -275,10 +340,10 @@ server <- function(input, output) {
     names(dist_vs_type) <- c("Single Part to Component", "Component to OEM", "OEM to Distribution center")
     #print(head(dist_vs_type))
     #boxplot(dist_vs_type)
-
+    
     levels_selected <- input$checkGroupLevelsBoxplot
     data_to_plot <- dist_vs_type[as.numeric(levels_selected)] %>% # choose data according to selection 
-                      melt() #melt into a long vector
+      melt() #melt into a long vector
     colnames(data_to_plot) = c("total_dist","type")
     
     #print(levels_selected)
@@ -295,9 +360,15 @@ server <- function(input, output) {
       ) +
       ggtitle("Total distance travelled by type of material flow") +
       xlab("") +
+<<<<<<< HEAD
       ylab("Distance in meters")
       
       
+=======
+      ylab("Distance")
+    
+    
+>>>>>>> d05d185a83a8568340c703352403317ef32d5531
   })
   
   
