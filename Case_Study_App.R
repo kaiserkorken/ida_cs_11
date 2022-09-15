@@ -148,9 +148,14 @@ library(geosphere)
 distance_in_m <- function(longA,latA,longB,latB) {
   distm(c(longA, latA), c(longB, latB), fun = distHaversine)
 }
+# calculate shortest distance between Points A and B given by longitude and latitude
+distance_in_m_fast <- function(longA,latA,longB,latB) {
+  sqrt((71.5*(longA-longB))**2+(111.3*(latA-latB))**2)
+}
 # calculate shortest distances between vectors of Points A and B given by longitude and latitude
 calc_distance_in_m <- function(longA_vec, latA_vec, longB_vec, latB_vec) {
-  mapply(distance_in_m, longA_vec, latA_vec, longB_vec, latB_vec)
+  #mapply(distance_in_m, longA_vec, latA_vec, longB_vec, latB_vec)
+  distance_in_m_fast(longA_vec, latA_vec, longB_vec, latB_vec)
 }
 
 fz_komp_teile_geo_dist <- fz_komp_teile_geo %>%

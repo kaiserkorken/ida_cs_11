@@ -143,9 +143,9 @@ body <- dashboardBody(
                 checkboxGroupInput("checkGroupLevelsBoxplot", 
                                    h3("Level:"), 
                                    choices = list("Single Part to component value" = 1, 
-                                                  "Component to OEM" = 2, 
-                                                  "OEM to distribution center" = 3,
-                                                  "OEM to state capital" = 4),
+                                                  "Component to OEM" = 2,
+                                                  "OEM to state capital" = 3,
+                                                  "State capital to distribution center" = 4),
                                    selected = c(1,2,3,4)
                 ),
               ),
@@ -331,18 +331,19 @@ server <- function(input, output) {
 
 
     # demo vectors
-    single_to_component <- 1:10
-    component_to_oem <- sqrt(1:200)
-    oem_to_distribution <- log2(1:500)
-    type_shortcut <- c("single_to_component","component_to_oem","oem_to_distribution")
+    single_to_component <- 1:10#final_data$Distanz_Einzelteil_zu_Komponente_in_m
+    component_to_oem <- sqrt(1:200)#final_data$Distanz_Komponente_zu_Fahrzeug_in_m
+    oem_to_state_capital <- log2(1:500)#final_data$Distanz_Fahrzeug_zu_Hauptstadt_in_m
+    state_capital_to_distribution <- log2(1:500)#final_data$Distanz_Hauptstadt_zu_Gemeinde_in_m
+    type_shortcut <- c("single_to_component","component_to_oem","oem_to_state_capital","state_capital_to_distribution")
 
     dist_vs_type <- lapply(type_shortcut, get, envir=environment())
-    names(dist_vs_type) <- c("Single Part to Component", "Component to OEM", "OEM to Distribution center")
+    names(dist_vs_type) <- c("Single Part to Component", "Component to OEM", "OEM to State Capital", "State Capital to Distribution center")
     #print(head(dist_vs_type))
     #boxplot(dist_vs_type)
     
-    levels_selected <- input$checkGroupLevelsBoxplot
-    data_to_plot <- dist_vs_type[as.numeric(levels_selected)] %>% # choose data according to selection 
+    levels_selected <- as.numeric(input$checkGroupLevelsBoxplot)
+    data_to_plot <- dist_vs_type[levels_selected] %>% # choose data according to selection 
       melt() #melt into a long vector
     colnames(data_to_plot) = c("total_dist","type")
     
@@ -360,13 +361,12 @@ server <- function(input, output) {
       ) +
       ggtitle("Total distance travelled by type of material flow") +
       xlab("") +
-
       ylab("Distance in meters")
 
   })
   
   
-  output$dynamicDataSet <- renderDataTable(mtcars)#, options = list(pageLength = 5))
+  output$dynamicDataSet <- renderDataTable(final_data)#, options = list(pageLength = 5))
   
 }
 
