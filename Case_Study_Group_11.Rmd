@@ -23,12 +23,37 @@ knitr::opts_chunk$set(echo = TRUE)
 
 (TODO: positions)
 
-Since the positions of the different sites are given in longitude and latitude, the distance between two points can not be calculated with the cartesian distance in cartesian coordinates. For this reason the 
+Since the positions of the different sites are given in longitude and latitude in degrees, the distance between two points can not be calculated with the cartesian distance in cartesian coordinates. For this reason the there is a function which calculates the distance between two points using a haversine curve and casts it to a integer in kilometres.
 
 ```{r}
 
-# calculate shortest distances between points A and B given by longitude and latitude in km
-calc_distance_in_km(lonA, latA, lonB, latB)
+# calculate shortest distances between points A and B given by longitude and latitude in degrees to km via Haversine
+calc_distance_in_km <- function(lonA, latA, lonB, latB) {
+  as.integer(distHaversine(cbind(lonA,latA),cbind(lonB,latB)))/1000
+}
+# example:
+calc_distance_in_km(52, 13, 50, 7)
+```
+
+This function is then used on the plants for single parts, components, OEM, State capital and Distribution center, and gets also added to the final data set.
+
+```{r}
+# calculate distances of material flow
+
+fz_komp_teile_geo_dist <- fz_komp_teile_geo %>%
+  mutate(Distanz_Einzelteil_zu_Komponente_in_km = calc_distance_in_km(Längengrad_Einzelteil, Breitengrad_Einzelteil, Längengrad_Komponente, Breitengrad_Komponente)) %>%
+  mutate(Distanz_Komponente_zu_Fahrzeug_in_km = calc_distance_in_km(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) %>%
+  mutate(Distanz_Fahrzeug_zu_Hauptstadt_in_km = calc_distance_in_km(Längengrad_Fahrzeug, Breitengrad_Fahrzeug, Längengrad_Hauptstadt, Breitengrad_Hauptstadt))%>%
+  mutate(Distanz_Hauptstadt_zu_Gemeinde_in_km = calc_distance_in_km(Längengrad_Hauptstadt, Breitengrad_Hauptstadt, Längengrad_Gemeinde, Breitengrad_Gemeinde ))
+
+```
+
+
+The final data set can now be viewed and saved for later use in the shiny app.
+
+```{r}
+summary(fz_komp_teile_geo)
+fwrite(fz_komp_teile_geo_dist,file=paste0(getwd(),"/Final_Data_Group_11.csv"), row.names = FALSE)
 ```
 
 
