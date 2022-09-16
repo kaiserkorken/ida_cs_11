@@ -1,17 +1,385 @@
 ---
 title: "Documentation"
 author: "Group 11"
-output: html_document:
-          toc: TRUE
+output: 
+  html_document:
+    toc: TRUE
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+Importing required libraries
+```{r, message=FALSE}
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  require(dplyr)
+}
+if (!require(data.table)) {
+  install.packages("data.table")
+  require(data.table)
+}
+if (!require(stringr)) {
+  install.packages("stringr")
+  require(stringr)
+}
+if (!require(readr)) {
+  install.packages("readr")
+  require(readr)
+}
+```
+
+
+## General considerations
+### Types vs IDs
+
+A single part, component or complete vehicle is of a certain _type_. It is interchangeable with other entities of the same type. For example, a vehicle might be of type 11.
+
+A single part, component or complete vehicle is also individually identified by its _ID_. The ID is unique and makes entities of the same type identifiable. Each ID can only be assigned once. The aforementioned vehicle might have the ID 11-1-12-600035. Notice how the ID starts with the type, but includes more information. It identifies the vehicle more precisely than the type.
+
+The terms "part number" and "component number" are ambiguous in this context and will be avoided.
+
 
 ## Importing the data
 
-## Data preparation
+The data describing the logistics chain is spread over many different files. The following types of files exist:
+
+| File type | Filename pattern | Description |
+|---|---|---|
+| Single part metadata | Einzelteil_T[part type] | Metadata about the production of single parts, including the factory number, production date, defects, etc. The parts are identified by unique IDs. There are individual files for each type of part. |
+| Component -> Single part link file | Bestandteile_Komponente_[component type] | Links components with their respective parts, linking component IDs with single part IDs. There is one line per component, with seperate columns for different types of parts. Each component type has its own file. |
+| Component metadata | Komponente_[component type.] Metadata about the production of components, including the factory number, production date, defects, etc. The components are identified by unique IDs. There are individual files for each type of component. |
+| Vehicle -> Component link file | Bestandteile_Fahrzeuge_OEM1_Typ[vehicle type] | Links vehicles with their respective parts, linking vehicle IDs with component IDs. There is one line per component, with seperate columns for different part functions (motor, seats, gearshift). Each vehicle type has its own file. Note: There are also files for OEM2, but they are of no concern, since the analysis is only for OEM1. |
+| Vehicle metadata | Fahrzeuge_OEM1_Typ[vehicle type] | Metadata about the production of vehicles, including the factory number, production date, defects, etc. The vehicles are identified by unique IDs. There are individual files for each type of vehicle. |
+| Factory geodata | OEM_Werke_2017-07-04_TrR.csv, Tier1_Werke_2017-07-11_v1.2_TrR.csv, Tier2_Werke_2017-07-11_v1.2_TrR.csv | Postcode, municipality and geographic coordinates of all factories, identified by their factory number. There are seperate files for each production stage (part production, component production, vehicle assembly) |
+| Registration data | Zulassungen_aller_Fahrzeuge.csv | Data concerning the registration of vehicles: municipality and registration date, identified by the vehicle ID |
+
+The import of all the different types of files follows the same basic pattern: 
+1. A list of files/relevant datasets is generated or defined
+2. An import function, that can read one file, is used in conjunction with the lapply() function and the previously compiled list to read all the files. The import function can either be an R file import function or a custom function that performs some manipulation on the imported data.
+3. The datasets imported by the import functions are concatenated into one by the rbindlist() function
+4. Additional manipulation is performed.
+
+One manipulation that is of specific note is the reshaping of the tables. As said earlier, the link files have separate columns for different types of entities. This is called _"long format"_. One vehicle-component file shall provide an example.
+```{r}
+example_wide <- fread(file.path("Data","Fahrzeug","Bestandteile_Fahrzeuge_OEM1_Typ11.csv"),header=TRUE,nrows=2)
+example_wide
+```
+This file contains one line per vehicle. However, for our analysis, it is more convenient to have the data in _"long format"_, i.e. with one line per vehicle -> component link. This transformation is performed by the reshape function:
+```{r}
+example_long <- example_wide %>%
+  reshape(varying=c("ID_Karosserie","ID_Schaltung","ID_Sitze","ID_Motor"), v.names = "ID_Komponente", times=c("Karosserie","Schaltung","Sitze","Motor"), direction="long") %>%
+  select(-id)
+example_long
+```
+The "id" column contains the original line number of the data. This is irrelevant for the analysis and therefore dropped. The vehicle -> component and component -> single part data will be transformed this way.
+
+Another manipulation is the "combination" of columns. In some data files, some columns are present multiple times and the data is spread across them. A custom function will be used to amalgamate these multiple columns into one. An example for multiple columns can be seen in the following excerpt from a component metadata file:
+```{r}
+fread(file.path("Data","Komponente","Komponente_K1DI1.csv"), select=c("ID_Motor.x","ID_Motor.y","ID_Motor"),nrow = 2)
+```
+There are three columns containing motor IDs, but for every line, only one of them contains data, the others are empty. The columns will be combined by the following custom function:
+```{r}
+combine_columns<-function(df_xy){
+  df_0 <- df_xy%>%select(-contains(c(".x", ".y"))) 
+  df_x<-select(df_xy,ends_with(".x"))%>%
+    na.omit()
+  names(df_x)<-gsub(".x","",names(df_x))
+    df_y<-select(df_xy,ends_with(".y"))%>%
+    na.omit()
+  names(df_y)<-gsub(".y","",names(df_y))
+  df_comb<- full_join(df_x,df_y)
+  if(ncol(df_0)==ncol(df_x)){
+    if(all(names(df_0) == names(df_x))){
+      df_comb <- df_comb%>%
+        full_join(df_0)  
+    }
+  }
+  return(df_comb)
+}
+```
+This slightly intimidating code 
+1. Cuts the dataset in three parts, on caontaining columns ending in .x, on containing columns ending in .y and on containing columns ending in neither.
+2. removes all empty lines
+3. renames the columns to remove the suffixes
+4. Performs a "full join" along all columns, thereby actually combining the columns.
+
+
+### Importing vehicle data
+
+The data import starts with the vehicle data. Since there are only two relevant files, the list of relevant files is simply hardcoded. The import function used is the fread() function, with the select argument to restrict the import to the vehicle IDs and the Motor and gearshift, as per the assignment. The data is then reshaped to long format as described.
+```{r, message=FALSE, warning=FALSE}
+fz_komp_files <- c("Data/Fahrzeug/Bestandteile_Fahrzeuge_OEM1_Typ11.csv","Data/Fahrzeug/Bestandteile_Fahrzeuge_OEM1_Typ12.csv")
+
+fz_zu_komp <- lapply(fz_komp_files,fread,select=c("ID_Fahrzeug","ID_Motor","ID_Schaltung"),header=TRUE) %>%
+	rbindlist() %>%
+	reshape(varying=c("ID_Motor","ID_Schaltung"), v.names = "ID_Komponente", times=c("Motor","Schaltung"), direction="long") %>%
+	rename(Typ_Komponente = time) %>%
+	select(-id)
+```
+The vehicle metadata is imported quite similarly, but there is no need for a reshape. Instead, the dataset is filtered for vehicles produced in 2015 (between 1 january and 31 December), because the analysis will be restricted to this year.
+```{r}
+fz_files <- c("Data/Fahrzeug/Fahrzeuge_OEM1_Typ11.csv","Data/Fahrzeug/Fahrzeuge_OEM1_Typ12.csv")
+
+fz_meta <- lapply(fz_files,fread,select=c("ID_Fahrzeug","Produktionsdatum","Werksnummer"),header=TRUE) %>%
+	rbindlist() %>%
+	filter(Produktionsdatum >= "2015-01-01" & Produktionsdatum <= "2015-12-31")
+```
+Now, these datasets are joined along the vehicle id to concentrate vehicle-related information in one table.
+```{r}
+fz_zu_komp <- fz_zu_komp %>%
+	inner_join(fz_meta,by="ID_Fahrzeug")
+```
+
+### Importing component data
+
+
+The import of the component metadata will use a custom import function: 
+```{r}
+komp_meta_file.path <- function(komp_type) {
+	dir(file.path("Data","Komponente"), pattern=paste("^Komponente_",komp_type,".*",sep=""), full.names=TRUE) 
+}
+
+load_metadata_komp <- function(ID_Komp) {
+	komp_meta <- fread(file=komp_meta_file.path(ID_Komp), select=c("ID_Motor","ID_Schaltung","ID_Schaltung.x","ID_Schaltung.y","Werksnummer","Werksnummer.x","Werksnummer.y"), header=TRUE)
+	
+	target_columns <- list("ID_Motor","ID_Schaltung","Werksnummer")
+	
+	for (i in target_columns) {
+		columns_to_combine <- intersect(grep(paste(i,"($|..$)",sep=""),names(komp_meta),value=TRUE), names(komp_meta))
+		if (length(columns_to_combine > 0)) {
+
+			komp_meta <- komp_meta %>%
+				reshape(varying=columns_to_combine, direction="long", v.name=i) %>%
+				select(-id,-time) %>%
+				filter(!is.na(.data[[i]]))
+		}
+	}
+	
+	colnames(komp_meta) <- c("ID_Komponente","Werksnummer")
+	return(komp_meta)
+}
+
+```
+komp_meta_file.path assembles a filename from the given component type. The main function calls fread() and then executes code that is more suitable to combining the columns in this particular case than combine_columns().
+
+A list of components included in the vehicles is compiled from the vehicle dataset, fz_zu_komp.
+```{r}
+list_komp <- unique(str_match(fz_zu_komp$ID_Komponente, "(K[1-7]\\w*)")[,1])
+```
+Using this, the metadata is imported using the basic pattern with load_metadata_komp() as import fucntion.
+```{r, message=FALSE, warning=FALSE}
+komp_meta <- lapply(list_komp, load_metadata_komp) %>%
+	rbindlist()
+```
+
+The import of the component -> single part link files also uses a custom import function:
+```{r}
+load_komp_zu_teile <- function(ID_Komp) {
+	filename = file.path("Data","Komponente",paste0("Bestandteile_Komponente_", ID_Komp, ".csv"))
+	frame <- fread(filename,header=TRUE,drop=1) 
+
+	columns = colnames(frame)
+	teile=character(0)
+	for (i in columns[1:length(columns)-1]) {
+		beginning_of_colname <- unlist(strsplit(i,split="_"))[1] 
+		if (beginning_of_colname == "ID") {
+			teile <- append(teile, i)
+		}
+	}
+
+	frame <- frame %>% 
+		reshape(varying=teile, v.names = "ID_Einzelteil", direction="long",times=teile) %>%
+		select(ID_Komponente=paste("ID_",ID_Komp,sep=""), ID_Einzelteil,time) %>%
+		rename(Typ_Einzelteil=time)
+		
+	return(frame)
+}
+```
+Most interesting in this function is the for loop, which searches the column names (except the last one, which is always the vehicle ID) for the string "ID_", to identify the part types used in the component. this information is then used in the reshape to long format, to assign the lines a part type.
+
+This function is now applied in the established basic pattern. Following this, the metadata and link data are joined along the component ID to concentrate component-related information in one table.
+```{r, message=FALSE, warning=FALSE}
+komp_zu_teile <- lapply(list_komp, load_komp_zu_teile) %>%
+	rbindlist() %>%
+	inner_join(komp_meta, by="ID_Komponente")
+```
+
+### Importing single part data
+
+Unfortunately, the single part metadata files are not all in a consistent format. They use quite different separators and linebreaks. It was deemed excessive to create a generic function to handle all the different cases, so instead, the import function contains a special case for every data file:
+```{r}
+teil_meta_file.path <- function(teil_type) {
+  dir(file.path("Data","Einzelteil"), pattern=paste("^Einzelteil_",teil_type,".*",sep=""), full.names=TRUE) 
+}
+
+load_metadata_teil <- function(ID_Teil) {
+  column_of_interest<-c("ID","Werksnummer","Produktionsdatum")
+  
+  # change string to needed form
+  ID_Teil_num<- str_replace_all(ID_Teil,"ID_T","") 
+  
+  if(strtoi(ID_Teil_num) > 10){
+    ID_Teil_num<-paste0("T",ID_Teil_num)
+  }else {
+    ID_Teil_num<-paste0("T0",ID_Teil_num)
+  }
+  
+  ID_Teil<-paste0("ID_",ID_Teil_num)
+  column_of_interest <- gsub("ID",ID_Teil,column_of_interest)
+  # parse through files and save to teil_meta with needed columns
+  
+  if(ID_Teil_num == "T01") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1" | | ', .) %>%
+      str_replace_all(" \\| \\| ", ";")%>%
+      str_replace_all("\\s", "\n")%>%
+      read_delim()%>%
+      select(starts_with(column_of_interest))%>%
+      combine_columns()
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T02") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1"  ',.)%>%
+      str_replace_all("  ", ";")%>%
+      str_replace_all("\t", "\n")%>%
+      read_delim()%>%
+      select(starts_with(column_of_interest))%>%
+      combine_columns()
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01") 
+  }
+  
+  if(ID_Teil_num == "T03") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1"|',.)%>%
+      str_replace_all("\\|", ",")%>%
+      str_replace_all("\v", "\n")%>%
+      read_delim()%>%
+      select(starts_with(column_of_interest))
+  }
+  
+  if(ID_Teil_num == "T04") {
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
+      select(starts_with(column_of_interest))
+    
+  }
+  
+  if(ID_Teil_num == "T05") {
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
+      
+      select(starts_with(column_of_interest))%>%
+      combine_columns()
+    
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T06") {
+    
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
+      select(starts_with(column_of_interest))
+  }
+  
+  if(ID_Teil_num == "T21") {
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
+      select(starts_with(column_of_interest))
+  }
+  
+  if(ID_Teil_num == "T22") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1"\t',.)%>%
+      str_replace_all("\\t", ",")%>%
+      str_replace_all('"Fehlerhaft_Fahrleistung"','"Fehlerhaft_Fahrleistung" ')%>%
+      str_replace_all("NA","NA ")%>%
+      str_replace_all(' "\\d+"', "\n")%>%
+      read_delim()%>%
+      select(starts_with(column_of_interest))
+    teil_meta[teil_meta=="NA "]<-NA
+    teil_meta <- combine_columns(teil_meta)
+    
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T23") {
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
+      select(starts_with(column_of_interest))%>%
+      combine_columns()
+    
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T24") {
+    teil_meta<-read_file(teil_meta_file.path(ID_Teil_num))%>%
+      paste0('"X1_1"  ',.) %>%
+      str_replace_all("\f", "\n")%>%
+      str_replace_all("  ", ",")%>%
+      read_delim()%>%
+      select(starts_with(column_of_interest))%>%
+      combine_columns()
+    teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
+  }
+  
+  if(ID_Teil_num == "T25") {
+    
+    teil_meta<-read_delim(teil_meta_file.path(ID_Teil_num))%>%
+      select(starts_with(column_of_interest))
+    
+  }
+  
+  teil_meta<-teil_meta %>% 
+    select(ID_Teil,"Werksnummer")
+  names(teil_meta)<-gsub(ID_Teil,"ID_Einzelteil",names(teil_meta))
+  
+  
+  return(teil_meta)
+}
+```
+teil_meta_file.path works similarly to komp_meta_file.path for the components.
+
+The format with several seperate if clauses was chosen instead of an if\{\} if else \{\} construction to make the code more readable and easier to copy and paste. The special cases are all very similar, but differ in details. Some of them use a two step process: They read in the file as text, process that text and use an import unction again to convert the text into a dataset.
+
+In the end, only the columns "ID_Einzelteil" and "Werksnummer" (factory number) remain.
+
+A list of parts included in the vehicles is compiled from the component dataset, komp_zu_teile.
+```{r}
+list_teil <- str_match(unique(komp_zu_teile$Typ_Einzelteil), "(ID_T[:digit:]+)")[,1]
+```
+The import function is now applied in the established basic pattern. Following this, part metadata is joined with the component data into a single dataset, containing component and part metadata.
+```{r, message=FALSE, warning=FALSE}
+teil_meta <- lapply(list_teil, load_metadata_teil) %>%
+  rbindlist()
+komp_zu_teile_werk<-inner_join(komp_zu_teile, teil_meta,by="ID_Einzelteil", suffix=c("_Komponente","_Einzelteil"))
+```
+
+### Importing Geodata
+
+The factory geodata is imported using fread as an import function. The list of geodata files is generated by finding all files in the "Geodaten" directory containing the word "Werke" (factories).
+```{r}
+geodata <- lapply(dir(file.path("Data","Geodaten"), pattern="Werke", full.names=TRUE), fread, select=1:5, keepLeadingZeros=FALSE) %>%
+	rbindlist() %>%
+	mutate(Werk = as.numeric(gsub("O","",Werk))) %>%
+	rename(Längengrad = 5)%>%
+  na.omit()%>%
+  select(-contains(c("PLZ")))
+```
+In the manipulation part of the above code, the leading letter "O" is removed from the OEM factory number, the name of the "Längengrad" column, which is affected by an encoding problem, is reestablished, and the "PLZ" (postcode) column is removed.
+
+The connection between the customer's municipality and the state capital (where the distribution center is) is missing in the Data. So we used "revGeo" on the municipality coordinates to get the state and state capital of the customer. The longitude and latitude of the state capitals were extracted and saved as "Gemeinde_Bund_HS.csv" in the "Additional_files" folder. Now, the municipality geodata is loaded using fread and another umlaut problem corrected. The municipality -> state link file does not require manipulation after having been loaded with fread, since we generated it ourselves and were able to generate it to our requirements.
+```{r}
+gemeinde_geo <- fread(file.path("Data","Geodaten","Geodaten_Gemeinden_v1.2_2017-08-22_TrR.csv"), drop=c(1,2), sep=";", dec=",") %>%
+  rename("Längengrad"="Laengengrad")
+names(gemeinde_geo)<-  gsub("Laengengrad","Längengrad",names(gemeinde_geo))
+
+geo_state_city <- fread(file.path("Additional_files","Gemeinde_Bund_HS_Geo.csv"))
+```
+
 
 ## Creation of the final data set
 
