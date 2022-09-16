@@ -55,7 +55,50 @@ fwrite(fz_komp_teile_geo_dist,file=paste0(getwd(),"/Final_Data_Group_11.csv"), r
 
 ### calculating positions and distances
 
-(TODO: positions)
+The positions of each municipality and location were determined on the map, and a filter was applied to the shape of the map, making only the positions of the used locations visible. The used locations can be found in the filter variables "e_filt", "k_filt", "f_filt", "s_filt" and "g_filt" and are used to hide the locations of the shape file of the map, which do not appear in the filter variables.
+
+```{r}
+e_filt <- st_as_sf(single_part_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+     k_filt <- st_as_sf(component_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+     f_filt <- st_as_sf(vehicle_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+     s_filt <- st_as_sf(state_capital_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+     g_filt <- st_as_sf(gemeinde_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+     
+     map_germany<-map_germany + 
+       tm_shape(e_filt)+tm_dots(col = "red",
+                                scale =2,
+                                border.col = "black",
+                                labels="Single-Part-Supplier",
+                                id="ORT",
+                                popup.vars = c("Type:" = "Typ", "Serial number:" = "ID","Factory plant:"="Werksnummer"),
+                                title = "Legened:")+
+       tm_shape(k_filt)+tm_dots(col = "yellow",
+                                scale =2,
+                                border.col = "black",
+                                labels="Component-Supplier",
+                                id="ORT",
+                                popup.vars = c("Type:" = "Typ", "Serial number:" = "ID","Factory plant:"="Werksnummer","Distance from SPS to CS in km:"="Distanz_Einzelteil_zu_in_km"),
+                                title = "Legened:")+
+       tm_shape(f_filt)+tm_dots(col = "blue",
+                                scale =2,
+                                border.col = "black",
+                                labels="OEM1 Factory",
+                                id="ORT",
+                                popup.vars = c( "OEM1 Factory:" = "Werksnummer", "Vehicle ID:" ="ID", "Distance from CS to OEM1 in km:"="Distanz_Komponente_zu_in_km"),
+                                title = "Legened:")+
+       tm_shape(s_filt)+tm_dots(col = "green",
+                                scale =2,
+                                border.col = "black",
+                                id="Hauptstadt",
+                                popup.vars = c("Distance from OEM1 to State Capital in km:"="Distanz_Fahrzeug_zu_in_km"),
+                                labels="Distribution Center")+
+       tm_shape(g_filt)+tm_dots(col = "orange",
+                                scale =2,
+                                border.col = "black",
+                                id="Gemeinden",
+                                popup.vars = c("Distance from State Capital to State of Customer in km:"="Distanz_Hauptstadt_zu_in_km","Distance overall in km:"="gesamtDistanz"),
+                                labels="State of Customer")
+```
 
 Since the positions of the different sites are given in longitude and latitude in degrees, the distance between two points can not be calculated with the cartesian distance in cartesian coordinates. For this reason the there is a function which calculates the distance between two points using a haversine curve and casts it to a integer in kilometres.
 
@@ -126,6 +169,8 @@ The plot shows how similar the distances between single parts and components are
 
 
 #### Material flow of components
+
+In the material flow, a diagram is shown where the x-axis represents the locations of the component suppliers and the y-axis the number of components delivered from the respective supplier to the two vehicle factories in Bonn and Nuremberg. The number of components delivered to Bonn is represented by the red bars and the number of components delivered to Nuremberg by the green bars.
 
 
 
