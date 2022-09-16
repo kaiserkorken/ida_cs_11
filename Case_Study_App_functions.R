@@ -1,5 +1,19 @@
-library(data.table)
-library(dplyr)
+if (!require(data.table)) {
+  install.packages("data.table")
+  require(data.table)
+}
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  require(dplyr)
+}
+if (!require(sp)) {
+  install.packages("sp")
+  require(sp)
+}
+if (!require(maptools)) {
+  install.packages("maptools")
+  require(maptools)
+}
 
 ##########################
 # GENERAL FUNCTIONS
@@ -166,7 +180,7 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))%>%
       combine_columns()
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T02") {
@@ -178,7 +192,7 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))%>%
       combine_columns()
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01") 
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01") 
   }
   
   if(ID_Teil_num == "T03") {
@@ -203,7 +217,7 @@ load_metadata_teil <- function(ID_Teil) {
       combine_columns()
     
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T06") {
@@ -230,7 +244,7 @@ load_metadata_teil <- function(ID_Teil) {
     teil_meta <- combine_columns(teil_meta)
     
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T23") {
@@ -239,7 +253,7 @@ load_metadata_teil <- function(ID_Teil) {
       combine_columns()
     
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T24") {
@@ -251,7 +265,7 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))%>%
       combine_columns()
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T25") {
@@ -274,8 +288,7 @@ load_metadata_teil <- function(ID_Teil) {
 ##########################
 ### SHINY APP functions###
 ##########################
-library(sp)
-library(maptools)
+
 # function from Rpubs
 points_to_line <- function(data, long, lat, id_field = NULL, sort_field = NULL) {
   
@@ -345,4 +358,14 @@ getFilterLines <- function(df,ger_map){
     
   }
   return(ger_map) 
+}
+
+
+###############################
+### Miscellaneous functions ###
+###############################
+
+# calculate shortest distances between vectors of Points A and B given by longitude and latitude
+calc_distance_in_km <- function(lonA, latA, lonB, latB) {
+  as.integer(distHaversine(cbind(lonA,latA),cbind(lonB,latB)))/1000
 }

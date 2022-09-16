@@ -1,7 +1,23 @@
-library(dplyr)
-library(data.table)
-library(stringr)
-library(readr)
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  require(dplyr)
+}
+if (!require(data.table)) {
+  install.packages("data.table")
+  require(data.table)
+}
+if (!require(stringr)) {
+  install.packages("stringr")
+  require(stringr)
+}
+if (!require(readr)) {
+  install.packages("readr")
+  require(readr)
+}
+if (!require(geosphere)) {
+  install.packages("geosphere")
+  require(geosphere)
+}
 
 source("Case_Study_App_functions.R")
 
@@ -142,22 +158,11 @@ fz_komp_teile_geo <- fz_komp_teile_zul %>%
 
 # calculate distances of material flow
 
-library(geosphere)
-#
-# calculate shortest distance between Points A and B given by longitude and latitude
-distance_in_m <- function(longA,latA,longB,latB) {
-  distm(c(longA, latA), c(longB, latB), fun = distHaversine)
-}
-# calculate shortest distances between vectors of Points A and B given by longitude and latitude
-calc_distance_in_m <- function(longA_vec, latA_vec, longB_vec, latB_vec) {
-  mapply(distance_in_m, longA_vec, latA_vec, longB_vec, latB_vec)
-}
-
 fz_komp_teile_geo_dist <- fz_komp_teile_geo %>%
-  mutate(Distanz_Einzelteil_zu_Komponente_in_m = calc_distance_in_m(Längengrad_Einzelteil, Breitengrad_Einzelteil, Längengrad_Komponente, Breitengrad_Komponente)) %>%
-  mutate(Distanz_Komponente_zu_Fahrzeug_in_m = calc_distance_in_m(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) %>%
-  mutate(Distanz_Fahrzeug_zu_Hauptstadt_in_m = calc_distance_in_m( Längengrad_Fahrzeug, Breitengrad_Fahrzeug, Längengrad_Hauptstadt, Breitengrad_Hauptstadt))%>%
-  mutate(Distanz_Hauptstadt_zu_Gemeinde_in_m = calc_distance_in_m( Längengrad_Hauptstadt, Breitengrad_Hauptstadt, Längengrad_Gemeinde, Breitengrad_Gemeinde ))
+  mutate(Distanz_Einzelteil_zu_Komponente_in_km = calc_distance_in_km(Längengrad_Einzelteil, Breitengrad_Einzelteil, Längengrad_Komponente, Breitengrad_Komponente)) %>%
+  mutate(Distanz_Komponente_zu_Fahrzeug_in_km = calc_distance_in_km(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) %>%
+  mutate(Distanz_Fahrzeug_zu_Hauptstadt_in_km = calc_distance_in_km(Längengrad_Fahrzeug, Breitengrad_Fahrzeug, Längengrad_Hauptstadt, Breitengrad_Hauptstadt))%>%
+  mutate(Distanz_Hauptstadt_zu_Gemeinde_in_km = calc_distance_in_km(Längengrad_Hauptstadt, Breitengrad_Hauptstadt, Längengrad_Gemeinde, Breitengrad_Gemeinde ))
 summary(fz_komp_teile_geo)
 
-write.csv(fz_komp_teile_geo_dist,paste0(getwd(),"/Final_dataset_group_11.csv"), row.names = FALSE)
+fwrite(fz_komp_teile_geo_dist,file=paste0(getwd(),"/Final_Data_Group_11.csv"), row.names = FALSE)

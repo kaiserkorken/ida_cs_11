@@ -9,13 +9,30 @@ output:
 Loading libraries for data import, analysis, plotting, distribution fitting, string matching, pretty printing data frames and tables
 
 ```{r, message=FALSE}
-
-library(dplyr)
-library(data.table)
-library(plotly)
-library(MASS)
-library(stringr)
-library(knitr)
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  require(dplyr)
+}
+if (!require(data.table)) {
+  install.packages("data.table")
+  require(data.table)
+}
+if (!require(plotly)) {
+  install.packages("plotly")
+  require(plotly)
+}
+if (!require(MASS)) {
+  install.packages("MASS")
+  require(MASS)
+}
+if (!require(knitr)) {
+  install.packages("knitr")
+  require(knitr)
+}
+if (!require(stringr)) {
+  install.packages("stringr")
+  require(stringr)
+}
 ```
 
 # Task 1

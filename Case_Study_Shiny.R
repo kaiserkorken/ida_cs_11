@@ -49,33 +49,126 @@ if (!require(htmltools)) {
   install.packages("htmltools")
   require(htmltools)
 }
-
-
 # for loading our data
-#library(raster)
-library(readr)
-library(readxl)
-library(sf)
-# for datasets
-library(maps)
-library(spData)
-# for creating animations
-library(magick)
-# for plotting
-library(grid)
-library(tmap)
-library(viridis)
-library(rgdal)
-library(tmaptools)
-library(dplyr)
-library(DT)
-library(reshape2)
-library(hrbrthemes)
-library(viridis)
+if (!require(readr)) {
+  install.packages("readr")
+  require(readr)
+}
 
-library(tidygeocoder)
+if (!require(readxl)) {
+  install.packages("readxl")
+  require(readxl)
+}
+
+if (!require(sf)) {
+  install.packages("sf")
+  require(sf)
+}
+# for datasets
+if (!require(maps)) {
+  install.packages("maps")
+  require(maps)
+}
+if (!require(spData)) {
+  install.packages("spData")
+  require(spData)
+}
+# for creating animations
+if (!require(magick)) {
+  install.packages("magick")
+  require(magick)
+}
+# for plotting
+if (!require(grid)) {
+  install.packages("grid")
+  require(grid)
+}
+if (!require(tmap)) {
+  install.packages("tmap")
+  require(tmap)
+}
+if (!require(viridis)) {
+  install.packages("viridis")
+  require(viridis)
+}
+
+if (!require(rgdal)) {
+  install.packages("rgdal")
+  require(rgdal)
+}
+if (!require(tmaptools)) {
+  install.packages("tmaptools")
+  require(tmaptools)
+}
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  require(dplyr)
+}
+if (!require(DT)) {
+  install.packages("DT")
+  require(DT)
+}
+if (!require(reshape2)) {
+  install.packages("reshape2")
+  require(reshape2)
+}
+if (!require(hrbrthemes)) {
+  install.packages("hrbrthemes")
+  require(hrbrthemes)
+}
+if (!require(tidygeocoder)) {
+  install.packages("tidygeocoder")
+  require(tidygeocoder)
+}
 
 source("Case_Study_App_functions.R")
+
+
+### data aggregation 
+# runs once when starting
+
+final_data <- read_csv("Final_Data_Group_11.csv")
+
+## material flow on different levels
+
+samples <- function(df) {
+  df[sample(nrow(df), 10000), ]
+}
+
+distance_single_to_component <- final_data %>%
+  select("ID_Einzelteil","Distanz_Einzelteil_zu_Komponente_in_km") %>%
+  unique() %>%
+  select("Distanz_Einzelteil_zu_Komponente_in_km") %>%
+  samples()
+
+distance_component_to_OEM <- final_data %>%
+  select("ID_Komponente","Distanz_Komponente_zu_Fahrzeug_in_km") %>%
+  unique() %>%
+  select("Distanz_Komponente_zu_Fahrzeug_in_km") %>%
+  samples()
+
+distance_OEM_to_state_capital <- final_data %>%
+  select("ID_Fahrzeug","Distanz_Fahrzeug_zu_Hauptstadt_in_km") %>%
+  unique() %>%
+  select("Distanz_Fahrzeug_zu_Hauptstadt_in_km") %>%
+  samples()
+
+distance_OEM_to_distribution <- final_data %>%
+  select("ID_Fahrzeug","Distanz_Fahrzeug_zu_Hauptstadt_in_km","Distanz_Hauptstadt_zu_Gemeinde_in_km") %>%
+  summarize(ID_Fahrzeug, Distanz_Fahrzeug_zu_Gemeinde_in_km = Distanz_Fahrzeug_zu_Hauptstadt_in_km + Distanz_Hauptstadt_zu_Gemeinde_in_km) %>%
+  select("Distanz_Fahrzeug_zu_Gemeinde_in_km") %>%
+  samples()
+
+# aggregate in single list for plotting
+levels <- c("distance_single_to_component","distance_component_to_OEM","distance_OEM_to_distribution","distance_OEM_to_state_capital")
+dist_vs_type <- lapply(levels, get, envir=environment())
+
+# captions
+captions_list <- c("1: From Single Part to Component", "2: From Component to OEM", "3: From OEM to Distribution center", "4: From OEM to State Capital")
+names(dist_vs_type) <- captions_list
+
+
+
 #### UI #####
 
 sidebar <- dashboardSidebar(
@@ -111,10 +204,10 @@ body <- dashboardBody(
                 ),
                 checkboxGroupInput("checkGroupLevelsMap", 
                                    h3("Level:"), 
-                                   choices = list("Single Part to component value" = 1, 
-                                                  "Component to OEM" = 2, 
-                                                  "OEM to distribution center" = 3,
-                                                  "OEM to state capital" = 4),
+                                   choices = list("1: Single Part to component value" = 1, 
+                                                  "2: Component to OEM" = 2, 
+                                                  "3: OEM to distribution center" = 3,
+                                                  "4: OEM to state capital" = 4),
                                    selected = c(1,2,3,4)
                 ),
                 radioButtons("radio", 
@@ -142,10 +235,10 @@ body <- dashboardBody(
                 
                 checkboxGroupInput("checkGroupLevelsBoxplot", 
                                    h3("Level:"), 
-                                   choices = list("Single Part to component value" = 1, 
-                                                  "Component to OEM" = 2, 
-                                                  "OEM to distribution center" = 3,
-                                                  "OEM to state capital" = 4),
+                                   choices = list("1: Single Part to component value" = 1, 
+                                                  "2: Component to OEM" = 2,
+                                                  "3: OEM to distribution center" = 3,
+                                                  "4: OEM to state capital" = 4),
                                    selected = c(1,2,3,4)
                 ),
               ),
@@ -174,20 +267,17 @@ body <- dashboardBody(
 
 # Define UI for app that draws a histogram ----
 ui <- dashboardPage(
-  dashboardHeader(title = "Case Study 11"),
+  title = "Case Study Group 11",
+  header = dashboardHeader(title = span(img(src="logo_v2.png", width = '100%'))),
   sidebar,
   body
 )
 
 #### SERVER FUNCTION #####
 
-## data aggregation
-
-final_data <- read_csv("Final_Data_Group_11.csv")
-
 server <- function(input, output) {
   
-  ## map
+  ### map
   
   # load shapefile for germany
   ger_shp <- read_sf("Additional_files/DEU_adm/DEU_adm3.shp")
@@ -296,77 +386,37 @@ server <- function(input, output) {
   #    # TODO: Plot necessary data for search bar usage
   #  }
   #})
-  
-  ## vehicle ID table and search
-  
-  #output$dynamicVehicleID <- renderDataTable(datatable(
-  #  mtcars["mpg"],
-  #  rownames = FALSE,
-  #  colnames = c("Vehicle ID"),
-  #  filter = "none",
-  #  selection="single",
-  #  options = list(scrollY = "200px", 
-  #                 scrollCollapse = TRUE,
-  #                 paging = FALSE,
-  #                 columnDefs = list(list(className = 'dt-left', targets = 0)),
-                   
-                   #columns.searchable = FALSE,
-                   #search = list(FALSE),
-                   #select = "single",
-  #                 select.items = "row",
-  #                 columns = list(searchable = FALSE),
-  #                 searching = TRUE,
-  #                 sDom  = '<"top">lfrt<"bottom">ip'
-  #  )
-  #)
-  #)
-  
-  
-  
-  
-  
+
   ## boxplot
   
   output$boxPlot <- renderPlot({
-
-
-    # demo vectors
-    single_to_component <- 1:10
-    component_to_oem <- sqrt(1:200)
-    oem_to_distribution <- log2(1:500)
-    type_shortcut <- c("single_to_component","component_to_oem","oem_to_distribution")
-
-    dist_vs_type <- lapply(type_shortcut, get, envir=environment())
-    names(dist_vs_type) <- c("Single Part to Component", "Component to OEM", "OEM to Distribution center")
-    #print(head(dist_vs_type))
-    #boxplot(dist_vs_type)
+    # get levels to plot from checkboxes
+    levels_selected <- sort(as.numeric(input$checkGroupLevelsBoxplot))
     
-    levels_selected <- input$checkGroupLevelsBoxplot
-    data_to_plot <- dist_vs_type[as.numeric(levels_selected)] %>% # choose data according to selection 
-      melt() #melt into a long vector
-    colnames(data_to_plot) = c("total_dist","type")
-    
-    #print(levels_selected)
-    #print(head(data_to_plot))
-    
-    ggplot(data_to_plot, aes(x=type,y=total_dist, fill=type)) + 
-      geom_boxplot() +
-      scale_fill_viridis(discrete = TRUE, alpha=0.6) +
-      geom_jitter(color="black", size=0.4, alpha=0.9) +
+    # plot selected levels
+    p <-ggplot()
+    if (1 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[1], y=unlist(dist_vs_type[1]), fill=captions_list[1]))}
+    if (2 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[2], y=unlist(dist_vs_type[2]), fill=captions_list[2]))}
+    if (3 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[3], y=unlist(dist_vs_type[3]), fill=captions_list[3]))}
+    if (4 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[4], y=unlist(dist_vs_type[4]), fill=captions_list[4]))}
+    p + 
+      #scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+      scale_fill_brewer(palette="Blues") +
       theme_ipsum() +
       theme(
         legend.position="none",
         plot.title = element_text(size=20)
       ) +
-      ggtitle("Total distance travelled by type of material flow") +
+      ggtitle("Overview of distance travelled of material over the supply chain") +
       xlab("") +
-
-      ylab("Distance in meters")
+      ylab("Distance in kilometers")
 
   })
   
   
-  output$dynamicDataSet <- renderDataTable(mtcars)#, options = list(pageLength = 5))
+  output$dynamicDataSet <- renderDataTable(final_data,
+    options = list(scrollX = TRUE)
+  )
   
 }
 
