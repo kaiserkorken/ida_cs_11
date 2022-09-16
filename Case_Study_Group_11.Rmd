@@ -1,7 +1,6 @@
 ---
 title: "Documentation"
 author: "Group 11"
-date: "`r Sys.Date()`"
 output: html_document:
           toc: TRUE
 ---
@@ -17,22 +16,45 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Creation of the final data set
 
 
-### Calculating positions and distances
+
+
+
+### Berechnung von Positionen und Distanzen
 
 (TODO: pos)
-
 
 
 ## Evaluation
 
 
-### Visualisation of the material flow 
 
-```
+The finished data set can now be saved as well as loaded.
+source("Case_Study_App_loading.R")
 
+
+### Visualisation of material flow
+
+For evaluation of the data it is helpful to visualize data in different ways. In the case study were different types of plots developed for the given data:
+
+#### Map
+
+
+
+
+#### Boxplot
+
+The boxplot shall show the material flow over the different phases of production. Before a single part gets assembled to a component it has to travel to the according component plant. In the same way, components have to travel to the OEM site, as well as the finished vehicles need to go to the state capital from which they go to the final distribution center. 
+
+```{r , echo=FALSE}
 boxplot_from_selected(captions_list, dist_vs_type, levels_selected=1:4) 
-
 ```
+
+The plot shows how similar the distances between single parts and components are both in median as well as deviation. Even the median of the distances between the OEM and State capital which is about 260 km as well as its deviation is very similar. All in all however is the distance a vehicle travels to the final distribution center in median about 90 km longer. And while most cars need to travel around this median within an interval of 200km (first to third quantile), the maximum travel distance is much greater.
+
+
+#### Material flow of components
+
+
 
 ## Result
 

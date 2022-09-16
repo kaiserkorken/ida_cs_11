@@ -176,5 +176,5 @@ levels <- c("distance_single_to_component","distance_component_to_OEM","distance
 dist_vs_type <- lapply(levels, get, envir=environment())
 
 # captions
-captions_list <- c("1: From Single Part to Component", "2: From Component to OEM", "3: From OEM to Distribution center", "4: From OEM to State Capital")
+captions_list <- c("1: From Single Part to Component", "2: From Component plant to OEM", "3: From OEM to Distribution center", "4: From OEM to State Capital")
 names(dist_vs_type) <- captions_list
