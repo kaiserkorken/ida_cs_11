@@ -361,8 +361,12 @@ getFilterLines <- function(df,ger_map,num){
   return(ger_map) 
 }
 
+
+
+
+
 # create a boxplot for different levels of material flow
-boxplot_from_selected <- function(levels_selected=1:4) {
+boxplot_from_selected <- function(captions_list, dist_vs_type, levels_selected=1:4) {
   # plot selected levels
   p <-ggplot()
   if (1 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[1], y=unlist(dist_vs_type[1]), fill=captions_list[1]))}

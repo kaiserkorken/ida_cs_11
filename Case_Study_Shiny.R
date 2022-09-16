@@ -123,50 +123,10 @@ if (!require(tidygeocoder)) {
 
 source("Case_Study_App_functions.R")
 
-
 ### data aggregation 
 # runs once when starting
 
-final_data <- read_csv("Final_Data_Group_11.csv")
-
-## material flow on different levels
-
-samples <- function(df) {
-  df[sample(nrow(df), 10000), ]
-}
-
-distance_single_to_component <- final_data %>%
-  select("ID_Einzelteil","Distanz_Einzelteil_zu_Komponente_in_km") %>%
-  unique() %>%
-  select("Distanz_Einzelteil_zu_Komponente_in_km") %>%
-  samples()
-
-distance_component_to_OEM <- final_data %>%
-  select("ID_Komponente","Distanz_Komponente_zu_Fahrzeug_in_km") %>%
-  unique() %>%
-  select("Distanz_Komponente_zu_Fahrzeug_in_km") %>%
-  samples()
-
-distance_OEM_to_state_capital <- final_data %>%
-  select("ID_Fahrzeug","Distanz_Fahrzeug_zu_Hauptstadt_in_km") %>%
-  unique() %>%
-  select("Distanz_Fahrzeug_zu_Hauptstadt_in_km") %>%
-  samples()
-
-distance_OEM_to_distribution <- final_data %>%
-  select("ID_Fahrzeug","Distanz_Fahrzeug_zu_Hauptstadt_in_km","Distanz_Hauptstadt_zu_Gemeinde_in_km") %>%
-  summarize(ID_Fahrzeug, Distanz_Fahrzeug_zu_Gemeinde_in_km = Distanz_Fahrzeug_zu_Hauptstadt_in_km + Distanz_Hauptstadt_zu_Gemeinde_in_km) %>%
-  select("Distanz_Fahrzeug_zu_Gemeinde_in_km") %>%
-  samples()
-
-# aggregate in single list for plotting
-levels <- c("distance_single_to_component","distance_component_to_OEM","distance_OEM_to_distribution","distance_OEM_to_state_capital")
-dist_vs_type <- lapply(levels, get, envir=environment())
-
-# captions
-captions_list <- c("1: From Single Part to Component", "2: From Component to OEM", "3: From OEM to Distribution center", "4: From OEM to State Capital")
-names(dist_vs_type) <- captions_list
-
+source("Case_Study_App_loading.R")
 
 
 #### UI #####
@@ -516,7 +476,7 @@ server <- function(input, output) {
   output$boxPlot <- renderPlot({
     # get levels to plot from checkboxes
     levels_selected <- sort(as.numeric(input$checkGroupLevelsBoxplot))
-    boxplot_from_selected(levels_selected)
+    boxplot_from_selected(captions_list, dist_vs_type, levels_selected)
   })
   
   

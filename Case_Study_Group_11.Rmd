@@ -25,6 +25,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Evaluation
 
+
+### Visualisation of the material flow 
+
+```
+
+boxplot_from_selected(captions_list, dist_vs_type, levels_selected=1:4) 
+
+```
+
 ## Result
 
 
