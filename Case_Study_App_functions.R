@@ -1,5 +1,19 @@
-library(data.table)
-library(dplyr)
+if (!require(data.table)) {
+  install.packages("data.table")
+  require(data.table)
+}
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  require(dplyr)
+}
+if (!require(sp)) {
+  install.packages("sp")
+  require(sp)
+}
+if (!require(maptools)) {
+  install.packages("maptools")
+  require(maptools)
+}
 
 ##########################
 # GENERAL FUNCTIONS
@@ -274,8 +288,7 @@ load_metadata_teil <- function(ID_Teil) {
 ##########################
 ### SHINY APP functions###
 ##########################
-library(sp)
-library(maptools)
+
 # function from Rpubs
 points_to_line <- function(data, long, lat, id_field = NULL, sort_field = NULL) {
   
@@ -345,4 +358,14 @@ getFilterLines <- function(df,ger_map){
     
   }
   return(ger_map) 
+}
+
+
+###############################
+### Miscellaneous functions ###
+###############################
+
+# calculate shortest distances between vectors of Points A and B given by longitude and latitude
+calc_distance_in_km <- function(longA_vec, latA_vec, longB_vec, latB_vec) {
+  as.integer(distHaversine(c(longA,latA),c(longB,latB)))/1000
 }
