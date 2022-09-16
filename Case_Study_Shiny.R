@@ -268,7 +268,7 @@ body <- dashboardBody(
 # Define UI for app that draws a histogram ----
 ui <- dashboardPage(
   title = "Case Study Group 11",
-  header = dashboardHeader(title = span(img(src="unicar_logo_blue_klein.png", width = '100%'))),
+  header = dashboardHeader(title = span(img(src="logo_v2.png", width = '100%'))),
   sidebar,
   body
 )
