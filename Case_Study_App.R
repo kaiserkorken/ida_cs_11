@@ -221,7 +221,7 @@ body <- dashboardBody(
             h2("Material Flow"),
             # Sidebar layout with input and output definitions ----
             sidebarLayout(
-              sidebarPanel(),
+              sidebarPanel(width = "0%"),
               # Sidebar panel for inputs ----
               # Main panel for displaying outputs ----
               mainPanel(
