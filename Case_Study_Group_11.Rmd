@@ -49,7 +49,7 @@ fz_komp_teile_geo_dist <- fz_komp_teile_geo %>%
 ```
 
 
-The final data set can now be viewed and saved for later use in the shiny app.
+The final data set can now be viewed and saved as a .csv-file for later use in the shiny app:
 
 ```{r}
 summary(fz_komp_teile_geo)

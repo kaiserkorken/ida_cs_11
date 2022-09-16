@@ -140,10 +140,10 @@ if (file.exists("Final_Data_Group_11.csv")) {
 
 sidebar <- dashboardSidebar(
   sidebarMenu(
-    menuItem("Map", tabName = "map", icon = icon("dashboard")),
-    menuItem("Boxplot", tabName = "boxplot", icon = icon("th")),
-    menuItem("Material Flow", tabName = "matFlow", icon = icon("th")),
-    menuItem("Data set", tabName = "dataSet", icon = icon("th"))
+    menuItem("Map", tabName = "map", icon = icon("map")),
+    menuItem("Boxplot", tabName = "boxplot", icon = icon("chart-simple")),
+    menuItem("Material Flow", tabName = "matFlow", icon = icon("simple")),
+    menuItem("Data set", tabName = "dataSet", icon = icon("database"))
   )
 )
 
