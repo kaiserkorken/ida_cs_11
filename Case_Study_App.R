@@ -150,6 +150,11 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
+  tags$head(tags$style('
+   body {
+      font-family: Source Sans Pro; 
+   }'
+  )), 
   tabItems(
     tabItem(tabName = "map",
             # Sidebar layout with input and output definitions ----
@@ -187,6 +192,7 @@ body <- dashboardBody(
               # Main panel for displaying outputs ----
               mainPanel(
                 # Output: 
+                img(src="legend.svg", width = 313, height = 175),
                 tmapOutput("map", width = "100%", height = 750), 
                 plotOutput("vehiclePlot")
               ),
