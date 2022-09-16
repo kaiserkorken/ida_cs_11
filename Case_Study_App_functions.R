@@ -360,7 +360,28 @@ getFilterLines <- function(df,ger_map,num){
   }
   return(ger_map) 
 }
-<<<<<<< HEAD
+
+# create a boxplot for different levels of material flow
+boxplot_from_selected <- function(levels_selected=1:4) {
+  # plot selected levels
+  p <-ggplot()
+  if (1 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[1], y=unlist(dist_vs_type[1]), fill=captions_list[1]))}
+  if (2 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[2], y=unlist(dist_vs_type[2]), fill=captions_list[2]))}
+  if (3 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[3], y=unlist(dist_vs_type[3]), fill=captions_list[3]))}
+  if (4 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[4], y=unlist(dist_vs_type[4]), fill=captions_list[4]))}
+  p + 
+    #scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    scale_fill_brewer(palette="Blues") +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=20)
+    ) +
+    ggtitle("Overview of distance travelled of material over the supply chain") +
+    xlab("") +
+    ylab("Distance in kilometers")
+}
+
 
 
 ###############################
@@ -371,5 +392,3 @@ getFilterLines <- function(df,ger_map,num){
 calc_distance_in_km <- function(lonA, latA, lonB, latB) {
   as.integer(distHaversine(cbind(lonA,latA),cbind(lonB,latB)))/1000
 }
-=======
->>>>>>> bbf7f7f24553909ee748aa9ba559bc3f777a3e0b

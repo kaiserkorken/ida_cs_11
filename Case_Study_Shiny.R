@@ -55,18 +55,10 @@ if (!require(readr)) {
   require(readr)
 }
 
-<<<<<<< HEAD
 if (!require(readxl)) {
   install.packages("readxl")
   require(readxl)
 }
-=======
-if (!require(hrbrthemes)) {
-  install.packages("hrbrthemes")
-  require(hrbrthemes)
-}
-
->>>>>>> bbf7f7f24553909ee748aa9ba559bc3f777a3e0b
 
 if (!require(sf)) {
   install.packages("sf")
@@ -284,54 +276,6 @@ ui <- dashboardPage(
 
 #### SERVER FUNCTION #####
 
-<<<<<<< HEAD
-=======
-### data aggregation 
-# runs once when starting
-
-final_data <- read_csv("Final_Data_Group_11.csv")
-colnames(final_data)[12]<-"ORT_Fahrzeug"
-## material flow on different levels
-
-samples <- function(df) {
-  df[sample(nrow(df), 10000), ]
-}
-
-distance_single_to_component <- final_data %>%
-  select("ID_Einzelteil","Distanz_Einzelteil_zu_Komponente_in_m") %>%
-  unique() %>%
-  select("Distanz_Einzelteil_zu_Komponente_in_m") %>%
-  samples()
-
-distance_component_to_OEM <- final_data %>%
-  select("ID_Komponente","Distanz_Komponente_zu_Fahrzeug_in_m") %>%
-  unique() %>%
-  select("Distanz_Komponente_zu_Fahrzeug_in_m") %>%
-  samples()
-
-distance_OEM_to_state_capital <- final_data %>%
-  select("ID_Fahrzeug","Distanz_Fahrzeug_zu_Hauptstadt_in_m") %>%
-  unique() %>%
-  select("Distanz_Fahrzeug_zu_Hauptstadt_in_m") %>%
-  samples()
-
-distance_OEM_to_distribution <- final_data %>%
-  select("ID_Fahrzeug","Distanz_Fahrzeug_zu_Hauptstadt_in_m","Distanz_Hauptstadt_zu_Gemeinde_in_m") %>%
-  summarize(ID_Fahrzeug, Distanz_Fahrzeug_zu_Gemeinde_in_m = Distanz_Fahrzeug_zu_Hauptstadt_in_m + Distanz_Hauptstadt_zu_Gemeinde_in_m) %>%
-  select("Distanz_Fahrzeug_zu_Gemeinde_in_m") %>%
-  samples()
-
-# aggregate in single list for plotting
-levels <- c("distance_single_to_component","distance_component_to_OEM","distance_OEM_to_distribution","distance_OEM_to_state_capital")
-dist_vs_type <- lapply(levels, get, envir=environment())
-
-# captions
-captions_list <- c("1: Single Part to Component", "2: Component to OEM", "3: OEM to Distribution center", "4: OEM to State Capital")
-names(dist_vs_type) <- captions_list
-
-
-##
->>>>>>> bbf7f7f24553909ee748aa9ba559bc3f777a3e0b
 server <- function(input, output) {
   
   ### map
@@ -572,25 +516,7 @@ server <- function(input, output) {
   output$boxPlot <- renderPlot({
     # get levels to plot from checkboxes
     levels_selected <- sort(as.numeric(input$checkGroupLevelsBoxplot))
-    
-    # plot selected levels
-    p <-ggplot()
-    if (1 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[1], y=unlist(dist_vs_type[1]), fill=captions_list[1]))}
-    if (2 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[2], y=unlist(dist_vs_type[2]), fill=captions_list[2]))}
-    if (3 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[3], y=unlist(dist_vs_type[3]), fill=captions_list[3]))}
-    if (4 %in% levels_selected) {p <- p + geom_boxplot(aes(x=captions_list[4], y=unlist(dist_vs_type[4]), fill=captions_list[4]))}
-    p + 
-      #scale_fill_viridis(discrete = TRUE, alpha=0.6) +
-      scale_fill_brewer(palette="Blues") +
-      theme_ipsum() +
-      theme(
-        legend.position="none",
-        plot.title = element_text(size=20)
-      ) +
-      ggtitle("Overview of distance travelled of material over the supply chain") +
-      xlab("") +
-      ylab("Distance in kilometers")
-
+    boxplot_from_selected(levels_selected)
   })
   
   
