@@ -140,12 +140,12 @@ colnames(final_data)[12]<-"ORT_Fahrzeug"
 
 sidebar <- dashboardSidebar(
   sidebarMenu(
-
+    
     menuItem("Map", tabName = "map", icon = icon("map")),
     menuItem("Boxplot", tabName = "boxplot", icon = icon("chart-simple")),
     menuItem("Material Flow", tabName = "matFlow", icon = icon("chart-simple")),
     menuItem("Data set", tabName = "dataSet", icon = icon("database"))
-
+    
   )
 )
 
@@ -235,7 +235,7 @@ body <- dashboardBody(
                 plotOutput("matflow", width = "100%")
               ),
             )
-            ),
+    ),
     
     tabItem(tabName = "dataSet",
             h2("Data set"), 
@@ -273,15 +273,8 @@ server <- function(input, output) {
     tm_scale_bar(position = c("left", "bottom"), width = 0.15)
   
   #initiate
-  coord<- data.frame(Breitengrad=NA, Längengrad=NA)%>%
-    na.omit()
-  single_part_location <- coord
-  component_location <- coord
-  vehicle_location <- coord
-  gemeinde_location <- coord
-  state_capital_location <- coord
   display_df<-data.frame(ID_Fahrzeug=NA,gesamtDistanz=NA)
-
+  
   
   #default filter: set dot to Berlin
   filtermap <- ger_shp %>%
@@ -304,7 +297,7 @@ server <- function(input, output) {
       final_data<-final_data%>%
         filter(grepl("11-[[:digit:]]-[[:digit:]]+",ID_Fahrzeug))
     }
-
+    
     vehicleID <- ""
     distanzen <- final_data%>%
       select(contains("Distanz"))#%>%
@@ -354,133 +347,121 @@ server <- function(input, output) {
     # if Fahrzeug_ID exists in data
     # get information from data and plot in map
     if (any(final_data$ID_Fahrzeug == vehicleID)) {
-    
+      
       # get information rows from data
       row_of_content <- row_of_content%>%
         full_join(final_data[which(final_data$ID_Fahrzeug == vehicleID),])
     }  
-      
-     # backup_row_of_content <- row_of_content
+    
+    # backup_row_of_content <- row_of_content
     if(nrow(row_of_content>0)){
-
+      
       # get location data from all needed locations
       single_part_location <- row_of_content[,c("Breitengrad_Einzelteil", "Längengrad_Einzelteil")]
       names(single_part_location) <- gsub("_Einzelteil","", names(single_part_location))
       
       component_location <- row_of_content[,c("Breitengrad_Komponente", "Längengrad_Komponente")]
       names(component_location) <- gsub("_Komponente","", names(component_location))
-
+      
       vehicle_location <- row_of_content[,c("Breitengrad_Fahrzeug", "Längengrad_Fahrzeug")]
       names(vehicle_location) <- gsub("_Fahrzeug","", names(vehicle_location))
       
       state_capital_location <- row_of_content[,c("Breitengrad_Hauptstadt", "Längengrad_Hauptstadt")]
       names(state_capital_location) <- gsub("_Hauptstadt","", names(state_capital_location))
-        
+      
       gemeinde_location <- row_of_content[,c("Breitengrad_Gemeinde", "Längengrad_Gemeinde")]
       names(gemeinde_location) <- gsub("_Gemeinde","", names(gemeinde_location))
-      
-      # built coordinate points of states
-      coord<- coord %>% full_join(single_part_location,by = c("Breitengrad", "Längengrad"))%>%
-        full_join(component_location,by = c("Breitengrad", "Längengrad"))%>%
-        full_join(vehicle_location,by = c("Breitengrad", "Längengrad"))%>%
-        full_join(state_capital_location,by = c("Breitengrad", "Längengrad"))%>%
-        full_join(gemeinde_location,by = c("Breitengrad", "Längengrad"))
-      # set filter for map 
-      coord_sf <- st_as_sf(coord, coords = c("Längengrad","Breitengrad"), crs=4326)
-     
-       filtermap <- coord_sf
-      
 
-        # switch to 1
-        inti <- 1
-   }
-
-
+      # switch to 1
+      inti <- 1
+    }
     
-   #default when switch is 0
-   if(!inti){
-     map_germany <- map_germany  +
-       tm_shape(filtermap) + tm_dots(size = 0.000001) 
-   }else if(inti){
-     #built connection lines from route
-     if("1" %in% checkB) {
-       teil_zu_komp <- data.frame(c(single_part_location, component_location))
-       map_germany <- getFilterLines(teil_zu_komp, map_germany,1) 
-       }
-     if("2" %in% checkB ){
-       komp_zu_fahr <- data.frame(c(component_location, vehicle_location))
-       map_germany <- getFilterLines(komp_zu_fahr, map_germany,2)
-     }
-     if("3" %in% checkB) {
-       fahr_zu_stadt <- data.frame(c(vehicle_location, state_capital_location))
-       map_germany <- getFilterLines(fahr_zu_stadt, map_germany,3) 
-     }
-     if("4" %in% checkB ){
-       stadt_zu_kunde <- data.frame(c(state_capital_location, gemeinde_location))
-       map_germany <- getFilterLines(stadt_zu_kunde, map_germany,4)
-     }
-     
-     single_part_label<-row_of_content%>%
-       select(contains("_Einzelteil"))
-     names(single_part_label) <- gsub("_Einzelteil","", names(single_part_label))
-     
-     component_label<-row_of_content%>%
-       select(contains("_Komponente"))
-     names(component_label) <- gsub("_Komponente","", names(component_label))
-     
-     vehicle_label<-row_of_content%>%
-       select(contains("_Fahrzeug"))
-     names(vehicle_label) <- gsub("_Fahrzeug","", names(vehicle_label))
-     
-     state_capital_label<-row_of_content%>%
-       select(contains("Hauptstadt"))
-     names(state_capital_label) <- gsub("_Hauptstadt","", names(state_capital_label))
-     
-     gemeinde_label<-row_of_content%>%
-       select(contains("Gemeinde"),"gesamtDistanz")
-     names(gemeinde_label) <- gsub("_Gemeinde","", names(gemeinde_label))
-     
-     e_filt <- st_as_sf(single_part_label, coords = c("Längengrad","Breitengrad"), crs=4326)
-     k_filt <- st_as_sf(component_label, coords = c("Längengrad","Breitengrad"), crs=4326)
-     f_filt <- st_as_sf(vehicle_label, coords = c("Längengrad","Breitengrad"), crs=4326)
-     s_filt <- st_as_sf(state_capital_label, coords = c("Längengrad","Breitengrad"), crs=4326)
-     g_filt <- st_as_sf(gemeinde_label, coords = c("Längengrad","Breitengrad"), crs=4326)
-
-     map_germany<-map_germany + 
-       tm_shape(e_filt)+tm_dots(col = "red",
-                                scale =2,
-                                border.col = "black",
-                                labels="Single-Part-Supplier",
-                                id="ORT",
-                                popup.vars = c("Type:" = "Typ", "Serial number:" = "ID","Factory plant:"="Werksnummer"),
-                                title = "Legened:")+
-       tm_shape(k_filt)+tm_dots(col = "yellow",
-                                scale =2,
-                                border.col = "black",
-                                labels="Component-Supplier",
-                                id="ORT",
-                                popup.vars = c("Type:" = "Typ", "Serial number:" = "ID","Factory plant:"="Werksnummer","Distance from SPS to CS in km:"="Distanz_Einzelteil_zu_in_km"),
-                                title = "Legened:")+
-       tm_shape(f_filt)+tm_dots(col = "blue",
-                                scale =2,
-                                border.col = "black",
-                                labels="OEM1 Factory",
-                                id="ORT",
-                                popup.vars = c( "OEM1 Factory:" = "Werksnummer", "Vehicle ID:" ="ID", "Distance from CS to OEM1 in km:"="Distanz_Komponente_zu_in_km"),
-                                title = "Legened:")+
-       tm_shape(s_filt)+tm_dots(col = "green",
-                                scale =2,
-                                border.col = "black",
-                                id="Hauptstadt",
-                                popup.vars = c("Distance from OEM1 to State Capital in km:"="Distanz_Fahrzeug_zu_in_km"),
-                                labels="Distribution Center")+
-       tm_shape(g_filt)+tm_dots(col = "orange",
-                                scale =2,
-                                border.col = "black",
-                                id="Gemeinden",
-                                popup.vars = c("Distance from State Capital to State of Customer in km:"="Distanz_Hauptstadt_zu_in_km","Distance overall in km:"="gesamtDistanz"),
-                                labels="State of Customer")
-   }
+    
+    
+    #default when switch is 0
+    if(!inti){
+      map_germany <- map_germany  +
+        tm_shape(filtermap) + tm_dots(size = 0.000001) 
+    }else if(inti){
+      #built connection lines from route
+      if("1" %in% checkB) {
+        teil_zu_komp <- data.frame(c(single_part_location, component_location))
+        map_germany <- getFilterLines(teil_zu_komp, map_germany,1) 
+      }
+      if("2" %in% checkB ){
+        komp_zu_fahr <- data.frame(c(component_location, vehicle_location))
+        map_germany <- getFilterLines(komp_zu_fahr, map_germany,2)
+      }
+      if("3" %in% checkB) {
+        fahr_zu_stadt <- data.frame(c(vehicle_location, state_capital_location))
+        map_germany <- getFilterLines(fahr_zu_stadt, map_germany,3) 
+      }
+      if("4" %in% checkB ){
+        stadt_zu_kunde <- data.frame(c(state_capital_location, gemeinde_location))
+        map_germany <- getFilterLines(stadt_zu_kunde, map_germany,4)
+      }
+      
+      single_part_label<-row_of_content%>%
+        select(contains("_Einzelteil"))
+      names(single_part_label) <- gsub("_Einzelteil","", names(single_part_label))
+      
+      component_label<-row_of_content%>%
+        select(contains("_Komponente"))
+      names(component_label) <- gsub("_Komponente","", names(component_label))
+      
+      vehicle_label<-row_of_content%>%
+        select(contains("_Fahrzeug"))
+      names(vehicle_label) <- gsub("_Fahrzeug","", names(vehicle_label))
+      
+      state_capital_label<-row_of_content%>%
+        select(contains("Hauptstadt"))
+      names(state_capital_label) <- gsub("_Hauptstadt","", names(state_capital_label))
+      
+      gemeinde_label<-row_of_content%>%
+        select(contains("Gemeinde"),"gesamtDistanz")
+      names(gemeinde_label) <- gsub("_Gemeinde","", names(gemeinde_label))
+      
+      e_filt <- st_as_sf(single_part_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+      k_filt <- st_as_sf(component_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+      f_filt <- st_as_sf(vehicle_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+      s_filt <- st_as_sf(state_capital_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+      g_filt <- st_as_sf(gemeinde_label, coords = c("Längengrad","Breitengrad"), crs=4326)
+      
+      map_germany<-map_germany + 
+        tm_shape(e_filt)+tm_dots(col = "red",
+                                 scale =2,
+                                 border.col = "black",
+                                 labels="Single-Part-Supplier",
+                                 id="ORT",
+                                 popup.vars = c("Type:" = "Typ", "Serial number:" = "ID","Factory plant:"="Werksnummer"),
+                                 title = "Legened:")+
+        tm_shape(k_filt)+tm_dots(col = "yellow",
+                                 scale =2,
+                                 border.col = "black",
+                                 labels="Component-Supplier",
+                                 id="ORT",
+                                 popup.vars = c("Type:" = "Typ", "Serial number:" = "ID","Factory plant:"="Werksnummer","Distance from SPS to CS in km:"="Distanz_Einzelteil_zu_in_km"),
+                                 title = "Legened:")+
+        tm_shape(f_filt)+tm_dots(col = "blue",
+                                 scale =2,
+                                 border.col = "black",
+                                 labels="OEM1 Factory",
+                                 id="ORT",
+                                 popup.vars = c( "OEM1 Factory:" = "Werksnummer", "Vehicle ID:" ="ID", "Distance from CS to OEM1 in km:"="Distanz_Komponente_zu_in_km"),
+                                 title = "Legened:")+
+        tm_shape(s_filt)+tm_dots(col = "green",
+                                 scale =2,
+                                 border.col = "black",
+                                 id="Hauptstadt",
+                                 popup.vars = c("Distance from OEM1 to State Capital in km:"="Distanz_Fahrzeug_zu_in_km"),
+                                 labels="Distribution Center")+
+        tm_shape(g_filt)+tm_dots(col = "orange",
+                                 scale =2,
+                                 border.col = "black",
+                                 id="Gemeinden",
+                                 popup.vars = c("Distance from State Capital to State of Customer in km:"="Distanz_Hauptstadt_zu_in_km","Distance overall in km:"="gesamtDistanz"),
+                                 labels="State of Customer")
+    }
   })
   
   ## boxplot
@@ -493,21 +474,21 @@ server <- function(input, output) {
   
   
   output$dynamicDataSet <- renderDataTable(final_data,
-    options = list(scrollX = TRUE)
+                                           options = list(scrollX = TRUE)
   )
   
   output$matflow<-renderPlot({
-
+    
     ggplot(final_data,aes(ORT_Komponente, fill = ORT_Fahrzeug))+
-     geom_bar(position = position_dodge(width=0.5))+
+      geom_bar(position = position_dodge(width=0.5))+
       ggtitle("Material Flow of Component Parts to the Vehicle Factories")+
       xlab("Location of Component Supplier")+
       ylab("")+theme(legend.position='top', 
-                                    legend.justification='left',
-                                    legend.direction='horizontal',
-                                    legend.title =element_blank())
+                     legend.justification='left',
+                     legend.direction='horizontal',
+                     legend.title =element_blank())
     
-      
+    
   },height = 400, width = 600)
 }
 
