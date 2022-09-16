@@ -15,9 +15,43 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Creation of the final data set
 
+Now the created tables will be merged to create the final data set. For this the table "fz_zu_komp" is joined by an inner-join operation with "komp_zu_teile_werk" by the "ID_Komponente" to "fz_komp_teile". Then "fz_komp_teile" is again joined by an inner-join operation with the table "zulassung", where the value of the column "ID_Fahrzeug" corresponds to the value of the column "IDNummer". 
 
+```{r}
+# join Fahrzeug->Komponente and Komponente->Einzelteil table
+names(fz_zu_komp)<-gsub("Werksnummer","Werksnummer_Fahrzeug",names(fz_zu_komp))
+fz_komp_teile <- fz_zu_komp %>%
+	inner_join(komp_zu_teile_werk,by="ID_Komponente")
+fz_komp_teile$Werksnummer_Einzelteil<-as.double(fz_komp_teile$Werksnummer_Einzelteil)
+fz_komp_teile_zul <- fz_komp_teile %>%
+  inner_join(zulassung,by=c("ID_Fahrzeug" = "IDNummer"))#%>%
+```
 
+To add the geodata as well, they are merged with the just created table "fz_komp_teile_zul" by performing several inner-join operations through the tables "geodata", "gemeinde_geo" and "geo_state_city". The data of "geodata" is added by matching the rows containing the value of the plant in "Werksnummer_Fahrzeug", "Werksnummer_Komponente" and "Werksnummer_Einzelteil". The inner-join operation by "gemeinde_geo" and "geo_state_city" matches the rows of the tables which have the same entry as municipality.
 
+```{r}
+# join geodata (for vehicles and component manufacturer
+fz_komp_teile_geo <- fz_komp_teile_zul %>%
+	inner_join(geodata, by=c(Werksnummer_Fahrzeug="Werk")) %>%
+	inner_join(geodata, by=c(Werksnummer_Komponente="Werk"), suffix=c("", "_Komponente"))%>%
+  inner_join(geodata, by=c(Werksnummer_Einzelteil="Werk"), suffix=c("", "_Einzelteil"))%>%
+  inner_join(gemeinde_geo, by=c("Gemeinden" = "Gemeinde"), suffix=c("_Fahrzeug",""))%>%
+  inner_join(geo_state_city, by=c("Gemeinden"="Gemeinde"), suffix=c("_Gemeinde","_Hauptstadt"))
+```
+
+Finally, the last table "fz_komp_teile_geo_dist" is created by calculating the distance between a single part and a component, the distance between a component and a vehicle, from a vehicle to a capital city and from a capital city to a municipality by applying the function "calc_distance_in_km" to the geodata, respectively taking the longitude and latitude of each single part, component, vehicle, capital city and municipality as position. This generated table will then be used as the final dataset and a .csv-data is created with the name "Final_Data_Group_11.csv".
+
+```{r}
+# calculate distances of material flow
+fz_komp_teile_geo_dist <- fz_komp_teile_geo %>%
+  mutate(Distanz_Einzelteil_zu_Komponente_in_km = calc_distance_in_km(Längengrad_Einzelteil, Breitengrad_Einzelteil, Längengrad_Komponente, Breitengrad_Komponente)) %>%
+  mutate(Distanz_Komponente_zu_Fahrzeug_in_km = calc_distance_in_km(Längengrad_Komponente, Breitengrad_Komponente, Längengrad_Fahrzeug, Breitengrad_Fahrzeug)) %>%
+  mutate(Distanz_Fahrzeug_zu_Hauptstadt_in_km = calc_distance_in_km(Längengrad_Fahrzeug, Breitengrad_Fahrzeug, Längengrad_Hauptstadt, Breitengrad_Hauptstadt))%>%
+  mutate(Distanz_Hauptstadt_zu_Gemeinde_in_km = calc_distance_in_km(Längengrad_Hauptstadt, Breitengrad_Hauptstadt, Längengrad_Gemeinde, Breitengrad_Gemeinde ))
+summary(fz_komp_teile_geo)
+
+fwrite(fz_komp_teile_geo_dist,file=paste0(getwd(),"/Final_Data_Group_11.csv"), row.names = FALSE)
+```
 
 ### calculating positions and distances
 
