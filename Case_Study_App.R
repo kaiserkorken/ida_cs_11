@@ -142,7 +142,7 @@ sidebar <- dashboardSidebar(
   sidebarMenu(
     menuItem("Map", tabName = "map", icon = icon("map")),
     menuItem("Boxplot", tabName = "boxplot", icon = icon("chart-simple")),
-    menuItem("Material Flow", tabName = "matFlow", icon = icon("simple")),
+    menuItem("Material Flow", tabName = "matFlow", icon = icon("chart-simple")),
     menuItem("Data set", tabName = "dataSet", icon = icon("database"))
   )
 )
