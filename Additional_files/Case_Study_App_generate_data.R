@@ -19,7 +19,13 @@ if (!require(geosphere)) {
   require(geosphere)
 }
 
-source("Case_Study_App_functions.R")
+# depending of working directory:
+if (file.exists("Case_Study_App_functions.R")) {
+  source("Case_Study_App_functions.R")
+} else {
+  source("Additional_files/Case_Study_App_functions.R")
+}
+
 
 # Generally the original data is in "wide" format, with seperate columns for different types of components and parts.
 # Therefor, the data is transposed to "long" format. That is what all the reshape() are for.
