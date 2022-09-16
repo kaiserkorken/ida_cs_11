@@ -135,22 +135,21 @@ if (file.exists("Final_Data_Group_11.csv")) {
   source("Additional_files/Case_Study_App_generate_data.R")
 }
 
-
+colnames(final_data)[12]<-"ORT_Fahrzeug"
 #### UI #####
 
 sidebar <- dashboardSidebar(
   sidebarMenu(
-    menuItem("Map", tabName = "map", icon = icon("map")),
-    menuItem("Boxplot", tabName = "boxplot", icon = icon("chart-simple")),
-    menuItem("Material Flow", tabName = "matFlow", icon = icon("simple")),
-    menuItem("Data set", tabName = "dataSet", icon = icon("database"))
+    menuItem("Map", tabName = "map", icon = icon("dashboard")),
+    menuItem("Boxplot", tabName = "boxplot", icon = icon("th")),
+    menuItem("Material Flow", tabName = "matFlow", icon = icon("th")),
+    menuItem("Data set", tabName = "dataSet", icon = icon("th"))
   )
 )
 
 body <- dashboardBody(
   tabItems(
     tabItem(tabName = "map",
-            #h2("Map"),
             # Sidebar layout with input and output definitions ----
             sidebarLayout(
               # Sidebar panel for inputs ----
@@ -160,8 +159,6 @@ body <- dashboardBody(
                           h3("Vehicle ID:"), 
                           placeholder  = "Enter ID here"),
                 actionButton("enterID", "Enter"),
-                actionButton("resetID", "Reset"),
-                #dataTableOutput("dynamicVehicleID"),
                 
                 checkboxGroupInput("checkGroupDistanceComparison", 
                                    h3("Options:"), 
@@ -218,11 +215,19 @@ body <- dashboardBody(
               ),
             )   
     ),
-    
     tabItem(tabName = "matFlow",
-            h2("Material Flow"), 
-            #dataTableOutput("dynamicVehicleID"),
-    ),
+            h2("Material Flow"),
+            # Sidebar layout with input and output definitions ----
+            sidebarLayout(
+              sidebarPanel(),
+              # Sidebar panel for inputs ----
+              # Main panel for displaying outputs ----
+              mainPanel(
+                # Output: 
+                plotOutput("matflow", width = "100%")
+              ),
+            )
+            ),
     
     tabItem(tabName = "dataSet",
             h2("Data set"), 
@@ -236,7 +241,7 @@ body <- dashboardBody(
 # Define UI for app that draws a histogram ----
 ui <- dashboardPage(
   title = "Case Study Group 11",
-  header = dashboardHeader(title = span(img(src="logo_v2.png", width = '100%'))),
+  header = dashboardHeader(title = img(src="logo_v2.png", width = '100%')),
   sidebar,
   body
 )
@@ -424,7 +429,7 @@ server <- function(input, output) {
      names(state_capital_label) <- gsub("_Hauptstadt","", names(state_capital_label))
      
      gemeinde_label<-row_of_content%>%
-       select(contains("Gemeinde"))
+       select(contains("Gemeinde"),"gesamtDistanz")
      names(gemeinde_label) <- gsub("_Gemeinde","", names(gemeinde_label))
      
      e_filt <- st_as_sf(single_part_label, coords = c("Längengrad","Breitengrad"), crs=4326)
@@ -446,26 +451,26 @@ server <- function(input, output) {
                                 border.col = "black",
                                 labels="Component-Supplier",
                                 id="ORT",
-                                popup.vars = c("Type:" = "Typ", "Serial number:" = "ID","Factory plant:"="Werksnummer","Distance from SPS to CS:"="Distanz_Einzelteil_zu_in_m"),
+                                popup.vars = c("Type:" = "Typ", "Serial number:" = "ID","Factory plant:"="Werksnummer","Distance from SPS to CS in km:"="Distanz_Einzelteil_zu_in_km"),
                                 title = "Legened:")+
        tm_shape(f_filt)+tm_dots(col = "blue",
                                 scale =2,
                                 border.col = "black",
                                 labels="OEM1 Factory",
                                 id="ORT",
-                                popup.vars = c( "OEM1 Factory:" = "Werksnummer", "Vehicle ID:" ="ID", "Distance from CS to OEM1:"="Distanz_Komponente_zu_in_m"),
+                                popup.vars = c( "OEM1 Factory:" = "Werksnummer", "Vehicle ID:" ="ID", "Distance from CS to OEM1 in km:"="Distanz_Komponente_zu_in_km"),
                                 title = "Legened:")+
        tm_shape(s_filt)+tm_dots(col = "green",
                                 scale =2,
                                 border.col = "black",
                                 id="Hauptstadt",
-                                popup.vars = c("Distance from OEM1 to State Capital:"="Distanz_Fahrzeug_zu_in_m"),
+                                popup.vars = c("Distance from OEM1 to State Capital in km:"="Distanz_Fahrzeug_zu_in_km"),
                                 labels="Distribution Center")+
        tm_shape(g_filt)+tm_dots(col = "orange",
                                 scale =2,
                                 border.col = "black",
                                 id="Gemeinden",
-                                popup.vars = c("Distance from State Capital to State of Customer:"="Distanz_Hauptstadt_zu_in_m"),
+                                popup.vars = c("Distance from State Capital to State of Customer in km:"="Distanz_Hauptstadt_zu_in_km","Distance overall in km:"="gesamtDistanz"),
                                 labels="State of Customer")
    }
   })
@@ -483,6 +488,19 @@ server <- function(input, output) {
     options = list(scrollX = TRUE)
   )
   
+  output$matflow<-renderPlot({
+
+    ggplot(final_data,aes(ORT_Komponente, fill = ORT_Fahrzeug))+
+     geom_bar(position = position_dodge(width=0.5))+
+      ggtitle("Material Flow of Component Parts to the Vehicle Factories")+
+      xlab("Location of Component Supplier")+
+      ylab("")+theme(legend.position='top', 
+                                    legend.justification='left',
+                                    legend.direction='horizontal',
+                                    legend.title =element_blank())
+    
+      
+  })
 }
 
 #### RUN 
