@@ -19,9 +19,18 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-### Berechnung von Positionen und Distanzen
+### calculating positions and distances
 
-(TODO: pos)
+(TODO: positions)
+
+Since the positions of the different sites are given in longitude and latitude, the distance between two points can not be calculated with the cartesian distance in cartesian coordinates. For this reason the 
+
+```{r}
+
+# calculate shortest distances between points A and B given by longitude and latitude in km
+calc_distance_in_km(lonA, latA, lonB, latB)
+```
+
 
 
 ## Evaluation
@@ -34,16 +43,18 @@ source("Case_Study_App_loading.R")
 
 ### Visualisation of material flow
 
-For evaluation of the data it is helpful to visualize data in different ways. In the case study were different types of plots developed for the given data:
+For evaluation of the data it is helpful to visualize data in different ways. In the case study were different types of plots developed for the given data. They show information about the distribution chain and material flow of the different levels of car manufacturing.
 
 #### Map
 
-
+To visualize the complex distribution chain of car manufacturing a map with a connection graph can be helpful. The map shows Germany and can plot all involved points in germany for a given vehicle ID. Furthermore the app can overlay the distribution chain of the shortest, longest or median total distance for comparison. The connections of the different levels can be turned on or off as well, if e.g. only the connection from single part plants to component plants shall be compared. Since there are different types of vehicles in the data the comparison of shortest, longest or median total distances can be enabled to only show the according paths of the same vehicle type as entered.
 
 
 #### Boxplot
 
 The boxplot shall show the material flow over the different phases of production. Before a single part gets assembled to a component it has to travel to the according component plant. In the same way, components have to travel to the OEM site, as well as the finished vehicles need to go to the state capital from which they go to the final distribution center. 
+
+For this, the data is grouped by single parts, components and vehicle IDs and 
 
 ```{r , echo=FALSE}
 boxplot_from_selected(captions_list, dist_vs_type, levels_selected=1:4) 
@@ -59,22 +70,5 @@ The plot shows how similar the distances between single parts and components are
 ## Result
 
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

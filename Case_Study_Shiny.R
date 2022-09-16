@@ -463,14 +463,6 @@ server <- function(input, output) {
    }
   })
   
-  ## vehicle plot
-  
-  #output$vehiclePlot <- renderPlot({
-  #  if (input$textInputVehicleID > 0) {
-  #    # TODO: Plot necessary data for search bar usage
-  #  }
-  #})
-
   ## boxplot
   
   output$boxPlot <- renderPlot({

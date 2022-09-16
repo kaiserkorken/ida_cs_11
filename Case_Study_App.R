@@ -166,3 +166,5 @@ fz_komp_teile_geo_dist <- fz_komp_teile_geo %>%
 summary(fz_komp_teile_geo)
 
 fwrite(fz_komp_teile_geo_dist,file=paste0(getwd(),"/Final_Data_Group_11.csv"), row.names = FALSE)
+
+
