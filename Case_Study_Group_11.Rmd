@@ -38,7 +38,10 @@ calc_distance_in_km(lonA, latA, lonB, latB)
 
 
 The finished data set can now be saved as well as loaded.
-source("Case_Study_App_loading.R")
+
+```{r}
+source("Case_Study_App_load_data.R")
+```
 
 
 ### Visualisation of material flow

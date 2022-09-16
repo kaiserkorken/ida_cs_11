@@ -129,10 +129,10 @@ source("Case_Study_App_functions.R")
 # check if Final_Data is present
 if (file.exists("Final_Data_Group_11.csv")) {
   # load Dataset and subsets
-  source("Case_Study_App_loading.R")
+  source("Case_Study_App_load_data.R")
 } else {
   # generate Data from scratch
-  source("Case_Study_Data_Generation")
+  source("Case_Study_App_generate_data.R")
 }
 
 
