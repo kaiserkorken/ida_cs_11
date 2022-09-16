@@ -166,7 +166,7 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))%>%
       combine_columns()
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T02") {
@@ -178,7 +178,7 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))%>%
       combine_columns()
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01") 
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01") 
   }
   
   if(ID_Teil_num == "T03") {
@@ -203,7 +203,7 @@ load_metadata_teil <- function(ID_Teil) {
       combine_columns()
     
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T06") {
@@ -230,7 +230,7 @@ load_metadata_teil <- function(ID_Teil) {
     teil_meta <- combine_columns(teil_meta)
     
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T23") {
@@ -239,7 +239,7 @@ load_metadata_teil <- function(ID_Teil) {
       combine_columns()
     
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T24") {
@@ -251,7 +251,7 @@ load_metadata_teil <- function(ID_Teil) {
       select(starts_with(column_of_interest))%>%
       combine_columns()
     teil_meta$Produktionsdatum <- as.Date(teil_meta$Produktionsdatum, format= "%Y-%m-%d")
-    teil_meta <- subset(teil_meta, Produktionsdatum >= "2015-01-01" & Produktionsdatum < "2016-01-01")
+    teil_meta <- subset(teil_meta, Produktionsdatum < "2016-01-01")
   }
   
   if(ID_Teil_num == "T25") {

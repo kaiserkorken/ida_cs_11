@@ -165,4 +165,4 @@ fz_komp_teile_geo_dist <- fz_komp_teile_geo %>%
   mutate(Distanz_Hauptstadt_zu_Gemeinde_in_m = calc_distance_in_m( Längengrad_Hauptstadt, Breitengrad_Hauptstadt, Längengrad_Gemeinde, Breitengrad_Gemeinde ))
 summary(fz_komp_teile_geo)
 
-write.csv(fz_komp_teile_geo_dist,paste0(getwd(),"/Final_Data_Group_11.csv"), row.names = FALSE)
+fwrite(fz_komp_teile_geo_dist,file=paste0(getwd(),"/Final_Data_Group_11.csv"), row.names = FALSE)
