@@ -333,9 +333,9 @@ points_to_line <- function(data, long, lat, id_field = NULL, sort_field = NULL) 
 # Function to built connection lines between points
 # Args: df-> data of coordinates; ger_map -> Map 
 # Return: ger_map
-getFilterLines <- function(df,ger_map){
+getFilterLines <- function(df,ger_map,num){
   #built color array; visible colors
-  color<-c("red","yellow","blue","green","orange", "darkslateblue","bisque","skyblue")
+  color<-c("red","yellow","blue","green","orange")
   #built connection df-> df2 to get the route
   for (i in 1:nrow(df)){
     a<- df[i,]%>%
@@ -353,12 +353,14 @@ getFilterLines <- function(df,ger_map){
                              lat = "Breitengrad"
                              
     )
+    proj4string(filtLine) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
     #add route to map
-    ger_map <- ger_map + tm_shape(filtLine)  + tm_lines(col = color[i], scale = 2, lty=1+i)
+    ger_map <- ger_map + tm_shape(filtLine)  + tm_lines(col = color[num], scale = 2, lty=2) 
     
   }
   return(ger_map) 
 }
+<<<<<<< HEAD
 
 
 ###############################
@@ -369,3 +371,5 @@ getFilterLines <- function(df,ger_map){
 calc_distance_in_km <- function(lonA, latA, lonB, latB) {
   as.integer(distHaversine(cbind(lonA,latA),cbind(lonB,latB)))/1000
 }
+=======
+>>>>>>> bbf7f7f24553909ee748aa9ba559bc3f777a3e0b
