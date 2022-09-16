@@ -150,7 +150,8 @@ distance_in_m <- function(longA,latA,longB,latB) {
 }
 # calculate shortest distance between Points A and B given by longitude and latitude
 distance_in_m_fast <- function(longA,latA,longB,latB) {
-  sqrt((71.5*(longA-longB))**2+(111.3*(latA-latB))**2)
+  #sqrt((71.5*(longA-longB))**2+(111.3*(latA-latB))**2)
+  distHaversine(c(longA,latA),c(longB,latB))
 }
 # calculate shortest distances between vectors of Points A and B given by longitude and latitude
 calc_distance_in_m <- function(longA_vec, latA_vec, longB_vec, latB_vec) {
