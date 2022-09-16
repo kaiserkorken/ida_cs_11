@@ -502,7 +502,7 @@ server <- function(input, output) {
                                     legend.title =element_blank())
     
       
-  })
+  },height = 400, width = 600)
 }
 
 #### RUN 
